@@ -6,8 +6,7 @@ version := "0.1"
 
 scalaVersion := "2.11.7"
 
-scalacOptions ++= Seq("-feature", 
-					  "-deprecation")
+scalacOptions ++= Seq("-feature", "-deprecation")
 
 resolvers ++= Seq(
 	"RoundEights" at "http://maven.spikemark.net/roundeights",
@@ -16,9 +15,12 @@ resolvers ++= Seq(
 
 libraryDependencies ++= Seq(
     "com.typesafe.akka" %% "akka-actor" % "2.4.0",
-     "com.typesafe.akka" %% "akka-remote" % "2.4.0",
+    "com.typesafe.akka" %% "akka-remote" % "2.4.0",
     "com.typesafe.akka" %% "akka-testkit" % "2.4.0",
+    "com.typesafe" % "config" % "1.3.0",
     "com.roundeights" %% "hasher" % "1.2.0",
     "io.spray" %% "spray-can" % "1.3.3",
+    "io.spray" %% "spray-routing" % "1.3.3",
+    "io.spray" %%  "spray-json" % "1.3.2",
     "org.scalatest" % "scalatest_2.11" % "2.2.4" % "test"
 )
