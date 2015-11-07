@@ -1,9 +1,12 @@
 *
+
 !*.sbt
 !README.md
 !.gitignore
+!*.py
 !*.scala
 !application.conf
+
 !*/
 
 
