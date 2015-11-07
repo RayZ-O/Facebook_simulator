@@ -1,27 +1,10 @@
 *
-!build.sbt
+!*.sbt
 !README.md
 !.gitignore
+!*.scala
+!application.conf
+!*/
 
-!src
-src/*
-!src/main
-src/main/*
-!src/main/scala
-src/main/scala/*
-!src/main/resources
-src/main/resources/*
-!src/main/scala/*.scala
-!src/main/resources/application.conf
 
-!src/test
-src/test/*
-!src/test/scala
-src/test/scala/*
-!src/test/scala/*.scala
 
-!project
-project/*
-!project/assembly.sbt
-!project/plugins.sbt
-!project/build.properties

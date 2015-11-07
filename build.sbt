@@ -20,7 +20,9 @@ libraryDependencies ++= Seq(
     "com.typesafe" % "config" % "1.3.0",
     "com.roundeights" %% "hasher" % "1.2.0",
     "io.spray" %% "spray-can" % "1.3.3",
+    "io.spray" %% "spray-caching" % "1.3.3",
     "io.spray" %% "spray-routing" % "1.3.3",
     "io.spray" %%  "spray-json" % "1.3.2",
-    "org.scalatest" % "scalatest_2.11" % "2.2.4" % "test"
+    "io.spray" %% "spray-testkit" % "1.3.3" % "test",
+    "org.specs2" %% "specs2-core" % "3.6.5" % "test"
 )

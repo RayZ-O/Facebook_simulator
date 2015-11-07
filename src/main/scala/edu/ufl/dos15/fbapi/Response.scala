@@ -1,3 +1,5 @@
+package edu.ufl.dos15.fbapi
+
 import spray.json.DefaultJsonProtocol
 import spray.json.RootJsonFormat
 import spray.json.JsArray
@@ -8,7 +10,7 @@ import spray.json.DeserializationException
 
 case class User(name: String, age: Int) {
     object MyJsonProtocol extends DefaultJsonProtocol {
-        implicit object PersonFormat extends RootJsonFormat[User] {
+        implicit object UserFormat extends RootJsonFormat[User] {
             def write(u: User) = JsArray(JsString(u.name), JsNumber(u.age))
             def read(value: JsValue) = value match {
               case JsArray(Vector(JsString(name), JsNumber(age))) => new User(name, age.toInt)
