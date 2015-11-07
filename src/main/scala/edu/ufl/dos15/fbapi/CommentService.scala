@@ -25,8 +25,7 @@ object CommentService {
         // message_tags: Array[Any],       // An array of Profiles tagged in message.
         parent_object: Any,           // Parent object this comment was made on
         parent_comment: Comment,      // For comment replies, this the comment that this is a reply to
-        user_likes: Boolean) {          // Whether the viewer has liked this comment
-    }
+        user_likes: Boolean)          // Whether the viewer has liked this comment
 }
 
 trait CommentService extends HttpService {

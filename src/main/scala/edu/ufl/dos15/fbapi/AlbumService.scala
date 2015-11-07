@@ -24,8 +24,7 @@ object AlbumService {
         place: Page,             // The place associated with this album
         privacy: String,         // The privacy settings for the album
         album_type: AlbumType.Value, // The type of the album
-        updated_time: Long){     // The last time the album was updated
-    }
+        updated_time: Long)      // The last time the album was updated
 
     object AlbumType extends Enumeration {
          type AlbumType = Value

@@ -18,8 +18,7 @@ object PageService {
         checkins: Int,        // Number of checkins at a place represented by a Page
         likes: Int,           // The number of users who like the Page
         location: Location,   // The location of this place. Applicable to all Places
-        parent_page: Page){    // Parent Page for this Page
-    }
+        parent_page: Page)    // Parent Page for this Page
 
     case class Location (
         city: String,
@@ -31,8 +30,7 @@ object PageService {
         region: String,
         state: String,
         street: String,
-        zip: String){
-    }
+        zip: String)
 }
 
 trait PageService extends HttpService {

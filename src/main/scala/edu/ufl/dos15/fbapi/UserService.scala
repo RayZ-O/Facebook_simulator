@@ -15,18 +15,17 @@ object UserService {
         first_name: String,   // The person's first name
         last_name: String,    // The person's last name
         middle_name: String,  // The person's middle name
-        name: String,         //The person's full name
+        name: String,         // The person's full name
         gender: String,       // The gender selected by this person, male or female
         birthday: String,     // The person's birthday. MM/DD/YYYY
         email: String,        // The person's primary email address
         link: String,         // A link to the person's Timeline
-        location: Page,       //The person's current location
+        location: Page,       // The person's current location
         locale: String,       // The person's locale
         timezone: Float,      // The person's current timezone offset from UTC
         verified: Boolean,    // Indicates whether the account has been verified
         hometown: Page,       // The person's hometown
-        education: List[EducationExperience]){  // The person's education
-    }
+        education: List[EducationExperience])  // The person's education
 
     case class EducationExperience(
         classes: List[Experience],  // Classes taken
@@ -35,16 +34,14 @@ object UserService {
         school: Page,               // The Facebook Page for this school
         education_type: String,     // The type of educational institution
         with_who: List[User],       // People tagged who went to school with this person
-        year: Page){                // Facebook Page for the year this person graduated
-    }
+        year: Page)                 // Facebook Page for the year this person graduated
 
     case class Experience (
         id: String,
         description: String,
         name: String,
         from: User,
-        with_who: List[User]){
-    }
+        with_who: List[User])
 }
 
 trait UserService extends HttpService {
