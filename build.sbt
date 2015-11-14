@@ -24,5 +24,5 @@ libraryDependencies ++= Seq(
     "io.spray" %% "spray-routing" % "1.3.3",
     "io.spray" %%  "spray-json" % "1.3.2",
     "io.spray" %% "spray-testkit" % "1.3.3" % "test",
-    "org.specs2" %% "specs2-core" % "3.6.5" % "test"
+    "org.specs2" %% "specs2" % "2.3.13" % "test"
 )
