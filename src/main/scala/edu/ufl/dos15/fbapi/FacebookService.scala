@@ -7,9 +7,17 @@ import spray.routing.directives.CachingDirectives._
 import spray.http.MediaTypes
 import spray.http.HttpResponse
 
-trait FacebookService extends HttpService with AlbumService with CommentService
-    with FriendListService with GroupService with PageService with PhotoService
-    with FeedService with UserService {
+case class Success(success: Boolean)
+
+trait FacebookService extends HttpService
+                      with AlbumService
+                      with CommentService
+                      with FriendListService
+                      with GroupService
+                      with PageService
+                      with PhotoService
+                      with FeedService
+                      with UserService {
 
     val FacebookAPIRoute = albumRoute ~         // A photo album
                            commentRoute ~       // A single comment

@@ -9,16 +9,15 @@ import spray.routing.HttpService
 
 object PageService {
     case class Page (
-        id: String,           // Page ID. No access token is required to access this field
-        category: String,     // The Page's category. e.g. Product/Service, Computers/Technology
-        description: String,  // The description of the Page
-        link: String,         // The Page's Facebook URL
-        name: String,         // The name of the Page
-        username: String,     // The alias of the Page. e.g, for www.facebook.com/platform the username is 'platform'
-        checkins: Int,        // Number of checkins at a place represented by a Page
-        likes: Int,           // The number of users who like the Page
-        location: Location,   // The location of this place. Applicable to all Places
-        parent_page: Page)    // Parent Page for this Page
+        id: String,                          // Page ID. No access token is required to access this field
+        category: Option[String] = None,     // The Page's category. e.g. Product/Service, Computers/Technology
+        description: Option[String] = None,  // The description of the Page
+        link: Option[String] = None,         // The Page's Facebook URL
+        name: Option[String] = None,         // The name of the Page
+        username: Option[String] = None,     // The alias of the Page
+        likes: Int = 0,                      // The number of users who like the Page
+        location: Option[Location] = None,   // The location of this place. Applicable to all Places
+        parent_page: Option[Page] = None)                 // Parent Page for this Page
 
     case class Location (
         city: String,
@@ -31,6 +30,8 @@ object PageService {
         state: String,
         street: String,
         zip: String)
+
+
 }
 
 trait PageService extends HttpService {
@@ -38,7 +39,7 @@ trait PageService extends HttpService {
     val pageCache = routeCache(maxCapacity = 1000, timeToIdle = Duration("30 min"))
 
     val pageRoute: Route = respondWithMediaType(MediaTypes.`application/json`) {
-        pathPrefix("group") {
+        pathPrefix("page" / Segment) { id =>
           get {
             cache(pageCache) {
               complete("Get")

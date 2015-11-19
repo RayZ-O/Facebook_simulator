@@ -7,8 +7,8 @@ import spray.http.MediaTypes
 import spray.http.HttpResponse
 import spray.routing.HttpService
 
-import edu.ufl.dos15.fbapi.UserService.User
-import edu.ufl.dos15.fbapi.PageService.Page
+import UserService.User
+import PageService.Page
 
 object FeedService {
     case class Feed (

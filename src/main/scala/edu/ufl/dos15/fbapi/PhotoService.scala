@@ -7,9 +7,9 @@ import spray.http.MediaTypes
 import spray.http.HttpResponse
 import spray.routing.HttpService
 
-import edu.ufl.dos15.fbapi.AlbumService.Album
-import edu.ufl.dos15.fbapi.UserService.User
-import edu.ufl.dos15.fbapi.PageService.Page
+import AlbumService.Album
+import UserService.User
+import PageService.Page
 
 object PhotoService {
     case class Photo (
