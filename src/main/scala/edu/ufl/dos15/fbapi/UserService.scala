@@ -1,5 +1,7 @@
 package edu.ufl.dos15.fbapi
 
+import java.util.UUID
+
 import scala.concurrent.duration.Duration
 import spray.routing.Route
 import spray.routing.directives.CachingDirectives._
@@ -15,7 +17,7 @@ import PageService.Page
 
 object UserService {
     case class User (
-        id: String,           // The id of this person's user account
+        id: Option[String] = None,           // The id of this person's user account
         email: String,        // The person's primary email address
         gender: String,       // The gender selected by this person, male or female
         first_name: String,   // The person's first name
@@ -35,44 +37,62 @@ object Json4sProtocol extends Json4sSupport {
 
 trait UserService extends HttpService {
     import Json4sProtocol._
+    import UserService._
 
     val userCache = routeCache(maxCapacity = 1000, timeToIdle = Duration("30 min"))
     import scala.collection.mutable.HashMap
     val db = new HashMap[String, String]
     val userRoute: Route = respondWithMediaType(MediaTypes.`application/json`) {
-        pathPrefix("photo" / Segment) { id =>
-          get {
-            parameter('fields.?) { fields =>
-              val json = parse(db(id))
-              cache(userCache) {
-                complete {
-                  if (fields.isEmpty) {
-                      json
-                  } else {
-                      val query = fields.get.split(",")
-                      import org.json4s.JsonDSL._
-                      query.foldLeft(JObject()) { (res, name) =>
-                        (res ~ (name -> json \ name))
-                      }
+        pathPrefix("user") {
+          get {  // gets infomation about a user
+            path(Segment) { id =>
+              println(id)
+              parameter('fields.?) { fields =>
+                val json = parse(db(id))
+                cache(userCache) {
+                  complete {
+                    if (fields.isEmpty) {
+                        json
+                    } else {
+                        val query = fields.get.split(",")
+                        import org.json4s.JsonDSL._
+                        query.foldLeft(JObject()) { (res, name) =>
+                          (res ~ (name -> json \ name))
+                        }
+                    }
                   }
                 }
               }
             }
           } ~
-          post {
-            parameter('fields) { fields =>
-                if (db.contains(id)) {
-                    val updated = parse(db(id)) merge parse(fields)
-                    db += id -> compact(render(updated))
-                } else {
-                    db += id -> fields
-                }
-                complete(Success(true))
+          post {  // creates a user
+            entity(as[JObject]) { jobject =>
+                val id = java.util.UUID.randomUUID().toString()
+                import org.json4s.JsonDSL._
+                val userJvalue = ("id" -> id) ~ jobject
+                db += id -> compact(render(userJvalue))
+                println(pretty(render(userJvalue)))
+                complete(SuccessID(id))
             }
           } ~
-          delete {
-            db -= id
-            complete(Success(true))
+          put {  // update a user
+             path(Segment) { id =>
+               parameterSeq { params =>
+                 import org.json4s.JsonDSL._
+                 val fields = params.foldLeft(JObject()) { (res, param) =>
+                                (res ~ (param._1 -> param._2))
+                              }
+                 val updated = parse(db(id)) merge fields
+                 db += id -> compact(render(updated))
+                 complete(Success(true))
+               }
+             }
+          } ~
+          delete {  // delete a user
+            path(Segment) { id =>
+              db -= id
+              complete(Success(true))
+            }
           }
         }
     }

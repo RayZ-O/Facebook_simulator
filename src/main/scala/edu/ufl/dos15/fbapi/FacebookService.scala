@@ -7,7 +7,7 @@ import spray.routing.directives.CachingDirectives._
 import spray.http.MediaTypes
 import spray.http.HttpResponse
 
-case class Success(success: Boolean)
+
 
 trait FacebookService extends HttpService
                       with AlbumService
