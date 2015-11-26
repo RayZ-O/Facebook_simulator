@@ -4,8 +4,12 @@ import scala.concurrent.duration.Duration
 import spray.routing.Route
 import spray.routing.directives.CachingDirectives._
 import spray.http.MediaTypes
-import spray.http.HttpResponse
+import spray.http.StatusCodes
 import spray.routing.HttpService
+
+import org.json4s._
+import org.json4s.native.JsonMethods._
+import org.json4s.native.Serialization.write
 
 object FriendListService {
     case class FriendList (
@@ -28,15 +32,19 @@ object FriendListService {
 }
 
 trait FriendListService extends HttpService {
+    import Json4sProtocol._
+    import FriendListService._
 
     val friendListCache = routeCache(maxCapacity = 1000, timeToIdle = Duration("30 min"))
 
     val friendListRoute: Route = respondWithMediaType(MediaTypes.`application/json`) {
-        pathPrefix("friendlist") {
-          get {
-            cache(friendListCache) {
-              complete("Get")
-              // TODO Get Request
+          (path("friend") & post) {  // creates a user
+            entity(as[FriendList]) { friendList =>
+              detach() {
+                val id = RyDB.insert(write(friendList))
+                import org.json4s.JsonDSL._
+                complete(StatusCodes.Created, render("id" -> id))
+              }
             }
           } ~
           post {
@@ -47,6 +55,5 @@ trait FriendListService extends HttpService {
             complete("Deleted")
             // TODO Delete Request
           }
-        }
     }
 }

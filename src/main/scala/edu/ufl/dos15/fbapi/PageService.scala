@@ -7,6 +7,9 @@ import spray.http.MediaTypes
 import spray.http.HttpResponse
 import spray.routing.HttpService
 
+import org.json4s._
+import org.json4s.native.JsonMethods._
+
 object PageService {
     case class Page (
         id: String,                          // Page ID. No access token is required to access this field
@@ -31,10 +34,10 @@ object PageService {
         street: String,
         zip: String)
 
-
 }
 
 trait PageService extends HttpService {
+    import Json4sProtocol._
 
     val pageCache = routeCache(maxCapacity = 1000, timeToIdle = Duration("30 min"))
 

@@ -6,8 +6,15 @@ import spray.routing.Route
 import spray.routing.directives.CachingDirectives._
 import spray.http.MediaTypes
 import spray.http.HttpResponse
+import spray.httpx.Json4sSupport
+import org.json4s._
+import org.json4s.ext.EnumSerializer
 
 
+object Json4sProtocol extends Json4sSupport {
+    import FriendListService._
+    implicit def json4sFormats: Formats = DefaultFormats + new EnumSerializer(FriendListType)
+}
 
 trait FacebookService extends HttpService
                       with AlbumService
