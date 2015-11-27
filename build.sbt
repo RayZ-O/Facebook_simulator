@@ -4,7 +4,7 @@ name := "FacebookSimulator"
 
 version := "0.1"
 
-scalaVersion := "2.11.6"
+scalaVersion := "2.11.7"
 
 scalacOptions ++= Seq("-feature", "-deprecation")
 
@@ -13,7 +13,7 @@ resolvers ++= Seq(
  	"spray repo" at "http://repo.spray.io"
 )
 
-val vakka = "2.3.9"
+val vakka = "2.4.0"
 val vspray = "1.3.3"
 val vjson4s = "3.2.11"
 

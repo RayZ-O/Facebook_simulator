@@ -1,6 +1,5 @@
 package edu.ufl.dos15.fbapi
 
-import java.util.UUID
 import scala.concurrent.duration.Duration
 import spray.routing.Route
 import spray.routing.directives.CachingDirectives._
@@ -8,10 +7,11 @@ import spray.http.MediaTypes
 import spray.http.HttpResponse
 import spray.http.StatusCodes
 import spray.routing.HttpService
-
 import org.json4s._
 import org.json4s.native.JsonMethods._
 import org.json4s.native.Serialization.write
+import spray.http.HttpEntity
+import spray.http.ContentTypes
 
 
 object UserService {
@@ -19,10 +19,10 @@ object UserService {
 
     case class User (
         id: Option[String] = None,           // The id of this person's user account
-        email: String,        // The person's primary email address
-        gender: String,       // The gender selected by this person, male or female
-        first_name: String,   // The person's first name
-        last_name: String,    // The person's last name
+        email: Option[String] = None,        // The person's primary email address
+        gender: Option[String] = None,       // The gender selected by this person, male or female
+        first_name: Option[String] = None,   // The person's first name
+        last_name: Option[String] = None,    // The person's last name
         verified: Boolean = false,    // Indicates whether the account has been verified
         middle_name: Option[String] = None,  // The person's middle name
         birthday: Option[String] = None,  // The person's birthday. MM/DD/YYYY
@@ -37,15 +37,18 @@ trait UserService extends HttpService {
     import UserService._
 
     val userCache = routeCache(maxCapacity = 1000, timeToIdle = Duration("30 min"))
-    import scala.collection.mutable.HashMap
-    val db = new HashMap[String, String]
+
     val userRoute: Route = respondWithMediaType(MediaTypes.`application/json`) {
+        (path("user") & get) {
+          complete(StatusCodes.OK)
+        } ~
         (path("user") & post) {  // creates a user
           entity(as[User]) { user =>
             detach() {
                 val id = RyDB.insert(write(user))
                 import org.json4s.JsonDSL._
-                complete(StatusCodes.Created, render("id" -> id))
+                complete(HttpResponse(StatusCodes.Created,
+                    HttpEntity(compact(render("id" -> id)))))
             }
           }
         } ~
@@ -64,11 +67,11 @@ trait UserService extends HttpService {
                             (res ~ (name -> json \ name)) }
                         case None => json
                       }
-                      cache(userCache) {
+//                      cache(userCache) {
                         complete(StatusCodes.OK, result)
-                      }
+//                      }
                     case _ =>
-                      complete(StatusCodes.BadRequest)
+                      complete(StatusCodes.NotFound)
                }
              }
            }
@@ -76,9 +79,14 @@ trait UserService extends HttpService {
          put { // update a user
            entity(as[User]) { values =>
              detach() {
-               RyDB.update(id, write(values))
-               import org.json4s.JsonDSL._
-               complete(StatusCodes.OK, render("success" -> true))
+               RyDB.update(id, write(values)) match {
+                 case true =>
+                   import org.json4s.JsonDSL._
+                   complete(StatusCodes.OK, render("success" -> true))
+                 case false =>
+                   complete(StatusCodes.NotFound)
+               }
+
              }
            }
          } ~
@@ -88,7 +96,7 @@ trait UserService extends HttpService {
                import org.json4s.JsonDSL._
                complete(StatusCodes.OK, render("success" -> true))
              case false =>
-               complete(StatusCodes.BadRequest)
+               complete(StatusCodes.NotFound)
            }
          }
       }

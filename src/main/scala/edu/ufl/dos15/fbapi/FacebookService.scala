@@ -17,21 +17,13 @@ object Json4sProtocol extends Json4sSupport {
 }
 
 trait FacebookService extends HttpService
-                      with AlbumService
-                      with CommentService
                       with FriendListService
-                      with GroupService
                       with PageService
-                      with PhotoService
                       with FeedService
                       with UserService {
 
-    val FacebookAPIRoute = albumRoute ~         // A photo album
-                           commentRoute ~       // A single comment
-                           friendListRoute ~    // This represents a user's friend list on Facebook
-                           groupRoute ~         // A Facebook group
+    val FacebookAPIRoute = friendListRoute ~    // This represents a user's friend list on Facebook
                            pageRoute ~          // A Facebook page
-                           photoRoute ~         // This represents a Photo on Facebook
                            feedRoute ~          // An individual entry in a feed.
                            userRoute            // A single user node
 }
