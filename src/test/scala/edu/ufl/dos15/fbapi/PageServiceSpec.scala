@@ -9,10 +9,9 @@ class PageServiceSpec extends Specification with Specs2RouteTest with PageServic
 
     "The PageService" should {
 
-    "return OK for GET requests to the root path" in {
-      Get() ~> pageRoute ~> check {
+    "return OK for GET requests to /page" in {
+      Get("/page") ~> pageRoute ~> check {
         response.status should be equalTo OK
-        response.entity should not be equalTo(None)
       }
     }
 

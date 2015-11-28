@@ -6,9 +6,9 @@ import spray.routing.directives.CachingDirectives._
 import spray.http.MediaTypes
 import spray.http.HttpResponse
 import spray.routing.HttpService
-
 import UserService.User
 import PageService.Page
+import spray.http.StatusCodes
 
 object FeedService {
     case class Feed (
@@ -77,7 +77,10 @@ trait FeedService extends HttpService {
     val feedCache = routeCache(maxCapacity = 1000, timeToIdle = Duration("30 min"))
 
     val feedRoute: Route = respondWithMediaType(MediaTypes.`application/json`) {
-        pathPrefix("photo") {
+        (path("feed") & get) {
+          complete(StatusCodes.OK)
+        } ~
+        pathPrefix("feed") {
           get {
             cache(feedCache) {
               complete("Get")

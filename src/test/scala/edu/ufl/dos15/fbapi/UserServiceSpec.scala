@@ -13,7 +13,14 @@ class UserServiceSpec extends Specification with Specs2RouteTest with UserServic
     import Json4sProtocol._
     import UserService._
     def actorRefFactory = system
-    var id: String = ""
+    var id = ""
+    def before = {
+      id = RyDB.insert("""{"email": "ruizhang1011@ufl.edu",
+                           "gender": "male",
+                           "first_name": "Rui",
+                           "last_name": "Zhang"}""")
+      println(id)
+    }
 
     "The UserService" should {
 
@@ -32,8 +39,7 @@ class UserServiceSpec extends Specification with Specs2RouteTest with UserServic
         response.status should be equalTo Created
         response.entity should not be equalTo(None)
         val user = responseAs[User]
-        id = user.id.getOrElse("")
-        id.equals("") should be equalTo(false)
+        user.id.equals("") should be equalTo(false)
       }
     }
 

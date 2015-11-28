@@ -9,8 +9,8 @@ class FriendListServiceSpec extends Specification with Specs2RouteTest with Frie
 
     "The FriendListService" should {
 
-    "return OK for GET requests to the root path" in {
-      Get() ~> friendListRoute ~> check {
+    "return OK for GET requests to /friends" in {
+      Get("/friends") ~> friendListRoute ~> check {
         response.status should be equalTo OK
         response.entity should not be equalTo(None)
       }

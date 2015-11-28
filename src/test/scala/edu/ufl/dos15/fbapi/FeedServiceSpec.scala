@@ -9,10 +9,9 @@ class FeedServiceSpec extends Specification with Specs2RouteTest with FeedServic
 
     "The FeedService" should {
 
-    "return OK for GET requests to the root path" in {
-      Get() ~> feedRoute ~> check {
+    "return OK for GET requests to /feed" in {
+      Get("/feed") ~> feedRoute ~> check {
         response.status should be equalTo OK
-        response.entity should not be equalTo(None)
       }
     }
 

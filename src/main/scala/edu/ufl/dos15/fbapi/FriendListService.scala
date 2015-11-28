@@ -38,6 +38,9 @@ trait FriendListService extends HttpService {
     val friendListCache = routeCache(maxCapacity = 1000, timeToIdle = Duration("30 min"))
 
     val friendListRoute: Route = respondWithMediaType(MediaTypes.`application/json`) {
+          (path("friends") & get) {
+            complete(StatusCodes.OK)
+          } ~
           (path("friends") & post) {  // creates a user
             entity(as[FriendList]) { friendList =>
               detach() {

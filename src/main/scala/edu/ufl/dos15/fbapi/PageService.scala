@@ -6,9 +6,9 @@ import spray.routing.directives.CachingDirectives._
 import spray.http.MediaTypes
 import spray.http.HttpResponse
 import spray.routing.HttpService
-
 import org.json4s._
 import org.json4s.native.JsonMethods._
+import spray.http.StatusCodes
 
 object PageService {
     case class Page (
@@ -42,6 +42,9 @@ trait PageService extends HttpService {
     val pageCache = routeCache(maxCapacity = 1000, timeToIdle = Duration("30 min"))
 
     val pageRoute: Route = respondWithMediaType(MediaTypes.`application/json`) {
+        (path("page") & get) {
+          complete(StatusCodes.OK)
+        } ~
         pathPrefix("page" / Segment) { id =>
           get {
             cache(pageCache) {
