@@ -3,16 +3,13 @@ package edu.ufl.dos15.fbapi
 import scala.concurrent.duration.Duration
 import spray.routing.Route
 import spray.routing.directives.CachingDirectives._
-import spray.http.MediaTypes
-import spray.http.HttpResponse
-import spray.http.StatusCodes
 import spray.routing.HttpService
+import spray.http.StatusCodes
+import spray.routing.RequestContext
 import org.json4s._
 import org.json4s.native.JsonMethods._
 import org.json4s.native.Serialization.write
-import spray.http.HttpEntity
-import spray.http.ContentTypes
-
+import akka.actor.Props
 
 object UserService {
     import PageService.Page
@@ -37,68 +34,35 @@ trait UserService extends HttpService {
     import UserService._
 
     val userCache = routeCache(maxCapacity = 1000, timeToIdle = Duration("30 min"))
+    val db = actorRefFactory.actorSelection("/db")
 
-    val userRoute: Route = respondWithMediaType(MediaTypes.`application/json`) {
-        (path("user") & get) {
-          complete(StatusCodes.OK)
-        } ~
-        (path("user") & post) {  // creates a user
-          entity(as[User]) { user =>
-            detach() {
-                val id = RyDB.insert(write(user))
-                import org.json4s.JsonDSL._
-                complete(HttpResponse(StatusCodes.Created,
-                    HttpEntity(compact(render("id" -> id)))))
-            }
+    val userRoute: Route = {
+      (path("user") & get) {
+        complete(StatusCodes.OK)
+      } ~
+      (path("user") & post) {  // creates a user
+        entity(as[User]) { user =>
+          ctx => handleRequest(ctx, Post(user))
+        }
+      } ~
+      pathPrefix("user" / Segment) { id => // gets infomation about a user
+        get {
+          parameter('fields.?) { fields =>
+            ctx => handleRequest(ctx, Get(id, fields))
+          }
+        }~
+        put { // update a user
+          entity(as[User]) { values =>
+            ctx => handleRequest(ctx, Put(id, values))
           }
         } ~
-        pathPrefix("user" / Segment) { id => // gets infomation about a user
-          get {
-            parameter('fields.?) { fields =>
-                detach() {
-                  RyDB.get(id) match {
-                    case s if s != null =>
-                      val json = parse(s)
-                      val result = fields match {
-                        case Some(fileds) =>
-                          val query = fields.get.split(",")
-                          import org.json4s.JsonDSL._
-                          query.foldLeft(JObject()) { (res, name) =>
-                            (res ~ (name -> json \ name)) }
-                        case None => json
-                      }
-//                      cache(userCache) {
-                        complete(StatusCodes.OK, result)
-//                      }
-                    case _ =>
-                      complete(StatusCodes.NotFound)
-               }
-             }
-           }
-         }~
-         put { // update a user
-           entity(as[User]) { values =>
-             detach() {
-               RyDB.update(id, write(values)) match {
-                 case true =>
-                   import org.json4s.JsonDSL._
-                   complete(StatusCodes.OK, render("success" -> true))
-                 case false =>
-                   complete(StatusCodes.NotFound)
-               }
-
-             }
-           }
-         } ~
-         delete { // delete a user
-           RyDB.delete(id) match {
-             case true =>
-               import org.json4s.JsonDSL._
-               complete(StatusCodes.OK, render("success" -> true))
-             case false =>
-               complete(StatusCodes.NotFound)
-           }
-         }
+        delete { // delete a user
+          ctx => handleRequest(ctx, Delete(id))
+        }
       }
+    }
+
+    def handleRequest(ctx: RequestContext, msg: Message) = {
+      actorRefFactory.actorOf(Props(classOf[PerRequestActor], ctx, db, msg))
     }
 }

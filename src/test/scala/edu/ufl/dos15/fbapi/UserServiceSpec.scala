@@ -11,14 +11,17 @@ import org.json4s.native.Serialization.{read, write}
 class UserServiceSpec extends Specification with Specs2RouteTest with UserService {
     import Json4sProtocol._
     import UserService._
+
     def actorRefFactory = system
-    var id = ""
-    def before = {
-      id = RyDB.insert("""{"email": "ruizhang1011@ufl.edu",
-                           "gender": "male",
-                           "first_name": "Rui",
-                           "last_name": "Zhang"}""")
-      println(id)
+
+    var id: String = _
+    val db = system.actorSelection("/db")
+
+    def beforeAll = {
+      db ! Insert("""{"email": "ruizhang1011@ufl.edu",
+                      "gender": "male",
+                      "first_name": "Rui",
+                      "last_name": "Zhang"}""")
     }
 
     "The UserService" should {

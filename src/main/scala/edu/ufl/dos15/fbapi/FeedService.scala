@@ -3,14 +3,18 @@ package edu.ufl.dos15.fbapi
 import scala.concurrent.duration.Duration
 import spray.routing.Route
 import spray.routing.directives.CachingDirectives._
-import spray.http.MediaTypes
-import spray.http.HttpResponse
 import spray.routing.HttpService
-import UserService.User
-import PageService.Page
 import spray.http.StatusCodes
+import spray.routing.RequestContext
+import org.json4s._
+import org.json4s.native.JsonMethods._
+import org.json4s.native.Serialization.write
+import akka.actor.Props
 
 object FeedService {
+    import UserService.User
+    import PageService.Page
+
     case class Feed (
         id: String,            // The post ID
         created_time: String,  // The time the post was initially published.
@@ -73,28 +77,39 @@ object FeedService {
 }
 
 trait FeedService extends HttpService {
+    import Json4sProtocol._
+    import FeedService._
 
     val feedCache = routeCache(maxCapacity = 1000, timeToIdle = Duration("30 min"))
+    val db = actorRefFactory.actorSelection("/db")
 
-    val feedRoute: Route = respondWithMediaType(MediaTypes.`application/json`) {
-        (path("feed") & get) {
-          complete(StatusCodes.OK)
-        } ~
-        pathPrefix("feed") {
-          get {
-            cache(feedCache) {
-              complete("Get")
-              // TODO Get Request
-            }
-          } ~
-          post {
-            complete("Post")
-            // TODO Post Request
-          } ~
-          delete {
-            complete("Deleted")
-            // TODO Delete Request
-          }
+    val feedRoute: Route = {
+      (path("page") & get) {
+        complete(StatusCodes.OK)
+      } ~
+      (path("page") & post) {  // creates a user
+        entity(as[Feed]) { feed =>
+          ctx => handleRequest(ctx, Post(feed))
         }
+      } ~
+      pathPrefix("page" / Segment) { id => // gets infomation about a user
+        get {
+          parameter('fields.?) { fields =>
+            ctx => handleRequest(ctx, Get(id, fields))
+          }
+        }~
+        put { // update a user
+          entity(as[Feed]) { values =>
+            ctx => handleRequest(ctx, Put(id, values))
+          }
+        } ~
+        delete { // delete a user
+          ctx => handleRequest(ctx, Delete(id))
+        }
+      }
+    }
+
+    def handleRequest(ctx: RequestContext, msg: Message) = {
+      actorRefFactory.actorOf(Props(classOf[PerRequestActor], ctx, db, msg))
     }
 }

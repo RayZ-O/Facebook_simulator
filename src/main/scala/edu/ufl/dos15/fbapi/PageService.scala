@@ -3,12 +3,13 @@ package edu.ufl.dos15.fbapi
 import scala.concurrent.duration.Duration
 import spray.routing.Route
 import spray.routing.directives.CachingDirectives._
-import spray.http.MediaTypes
-import spray.http.HttpResponse
 import spray.routing.HttpService
+import spray.http.StatusCodes
+import spray.routing.RequestContext
 import org.json4s._
 import org.json4s.native.JsonMethods._
-import spray.http.StatusCodes
+import org.json4s.native.Serialization.write
+import akka.actor.Props
 
 object PageService {
     case class Page (
@@ -38,28 +39,38 @@ object PageService {
 
 trait PageService extends HttpService {
     import Json4sProtocol._
+    import PageService._
 
     val pageCache = routeCache(maxCapacity = 1000, timeToIdle = Duration("30 min"))
+    val db = actorRefFactory.actorSelection("/db")
 
-    val pageRoute: Route = respondWithMediaType(MediaTypes.`application/json`) {
-        (path("page") & get) {
-          complete(StatusCodes.OK)
-        } ~
-        pathPrefix("page" / Segment) { id =>
-          get {
-            cache(pageCache) {
-              complete("Get")
-              // TODO Get Request
-            }
-          } ~
-          post {
-            complete("Post")
-            // TODO Post Request
-          } ~
-          delete {
-            complete("Deleted")
-            // TODO Delete Request
-          }
+    val pageRoute: Route = {
+      (path("page") & get) {
+        complete(StatusCodes.OK)
+      } ~
+      (path("page") & post) {  // creates a user
+        entity(as[Page]) { page =>
+          ctx => handleRequest(ctx, Post(page))
         }
+      } ~
+      pathPrefix("page" / Segment) { id => // gets infomation about a user
+        get {
+          parameter('fields.?) { fields =>
+            ctx => handleRequest(ctx, Get(id, fields))
+          }
+        }~
+        put { // update a user
+          entity(as[Page]) { values =>
+            ctx => handleRequest(ctx, Put(id, values))
+          }
+        } ~
+        delete { // delete a user
+          ctx => handleRequest(ctx, Delete(id))
+        }
+      }
+    }
+
+    def handleRequest(ctx: RequestContext, msg: Message) = {
+      actorRefFactory.actorOf(Props(classOf[PerRequestActor], ctx, db, msg))
     }
 }
