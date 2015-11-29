@@ -3,8 +3,7 @@ package edu.ufl.dos15.fbapi
 import org.specs2.mutable.Specification
 import spray.testkit.Specs2RouteTest
 import spray.http.StatusCodes._
-import spray.http.HttpMethods
-import spray.http.{MediaTypes, HttpEntity}
+import spray.http._
 import org.json4s._
 import org.json4s.native.JsonMethods._
 import org.json4s.native.Serialization.{read, write}
@@ -31,7 +30,7 @@ class UserServiceSpec extends Specification with Specs2RouteTest with UserServic
     }
 
     "return id for POST requests to /user" in {
-      Post("/user", HttpEntity(MediaTypes.`application/json`,
+      Post("/user", HttpEntity(ContentTypes.`application/json`,
           write(User(email=Some("ruizhang1011@ufl.edu"),
                      gender=Some("male"),
                      first_name=Some("Rui"),
