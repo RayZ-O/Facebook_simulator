@@ -37,12 +37,11 @@ object PageService {
 
 }
 
-trait PageService extends HttpService {
+trait PageService extends HttpService with PerRequestFactory {
     import Json4sProtocol._
     import PageService._
 
     val pageCache = routeCache(maxCapacity = 1000, timeToIdle = Duration("30 min"))
-    val db = actorRefFactory.actorSelection("/db")
 
     val pageRoute: Route = {
       (path("page") & get) {
@@ -68,9 +67,5 @@ trait PageService extends HttpService {
           ctx => handleRequest(ctx, Delete(id))
         }
       }
-    }
-
-    def handleRequest(ctx: RequestContext, msg: Message) = {
-      actorRefFactory.actorOf(Props(classOf[PerRequestActor], ctx, db, msg))
     }
 }

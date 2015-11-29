@@ -12,6 +12,7 @@ import spray.httpx.Json4sSupport
 import org.json4s._
 import org.json4s.native.JsonMethods._
 import org.json4s.native.Serialization
+import spray.routing.HttpService
 
 
 class PerRequestActor(ctx: RequestContext, db: ActorRef, message: Message)
@@ -126,5 +127,13 @@ class PerRequestActor(ctx: RequestContext, db: ActorRef, message: Message)
     ctx.complete(status, obj)
     context.stop(self)
   }
+}
+
+trait PerRequestFactory {
+    this: HttpService =>
+    val db = actorRefFactory.actorSelection("/db")
+    def handleRequest(ctx: RequestContext, msg: Message) = {
+      actorRefFactory.actorOf(Props(classOf[PerRequestActor], ctx, db, msg))
+    }
 }
 

@@ -29,12 +29,11 @@ object UserService {
         location: Option[Page] = None)       // The person's current location
 }
 
-trait UserService extends HttpService {
+trait UserService extends HttpService with PerRequestFactory {
     import Json4sProtocol._
     import UserService._
 
     val userCache = routeCache(maxCapacity = 1000, timeToIdle = Duration("30 min"))
-    val db = actorRefFactory.actorSelection("/db")
 
     val userRoute: Route = {
       (path("user") & get) {
@@ -60,9 +59,5 @@ trait UserService extends HttpService {
           ctx => handleRequest(ctx, Delete(id))
         }
       }
-    }
-
-    def handleRequest(ctx: RequestContext, msg: Message) = {
-      actorRefFactory.actorOf(Props(classOf[PerRequestActor], ctx, db, msg))
     }
 }

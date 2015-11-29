@@ -32,12 +32,11 @@ object FriendListService {
         }
 }
 
-trait FriendListService extends HttpService {
+trait FriendListService extends HttpService with PerRequestFactory {
     import Json4sProtocol._
     import FriendListService._
 
     val friendListCache = routeCache(maxCapacity = 1000, timeToIdle = Duration("30 min"))
-    val db = actorRefFactory.actorSelection("/db")
 
     val friendListRoute: Route = {
       (path("friends") & get) {
@@ -63,9 +62,5 @@ trait FriendListService extends HttpService {
           ctx => handleRequest(ctx, Delete(id))
         }
       }
-    }
-
-    def handleRequest(ctx: RequestContext, msg: Message) = {
-      actorRefFactory.actorOf(Props(classOf[PerRequestActor], ctx, db, msg))
     }
 }

@@ -76,12 +76,11 @@ object FeedService {
     }
 }
 
-trait FeedService extends HttpService {
+trait FeedService extends HttpService with PerRequestFactory {
     import Json4sProtocol._
     import FeedService._
 
     val feedCache = routeCache(maxCapacity = 1000, timeToIdle = Duration("30 min"))
-    val db = actorRefFactory.actorSelection("/db")
 
     val feedRoute: Route = {
       (path("page") & get) {
@@ -107,9 +106,5 @@ trait FeedService extends HttpService {
           ctx => handleRequest(ctx, Delete(id))
         }
       }
-    }
-
-    def handleRequest(ctx: RequestContext, msg: Message) = {
-      actorRefFactory.actorOf(Props(classOf[PerRequestActor], ctx, db, msg))
     }
 }

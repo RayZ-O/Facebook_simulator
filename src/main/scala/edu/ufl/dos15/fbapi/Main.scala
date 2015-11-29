@@ -14,7 +14,8 @@ object Main {
         val serverPort = Try(config.getInt("server.port")).getOrElse(8080)
 
         implicit val system = ActorSystem("FacebookSystem")
-        val server= system.actorOf(Props[Server], "server")
+        val db = system.actorOf(Props[MockDB], "db")
+        val server = system.actorOf(Props[Server], "server")
         IO(Http) ! Http.Bind(server, serverHost, serverPort)
     }
 }

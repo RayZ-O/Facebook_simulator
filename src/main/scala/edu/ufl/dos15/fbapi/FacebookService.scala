@@ -16,8 +16,7 @@ object Json4sProtocol extends Json4sSupport {
     implicit def json4sFormats: Formats = DefaultFormats + new EnumSerializer(FriendListType)
 }
 
-trait FacebookService extends HttpService
-                      with FriendListService
+trait FacebookService extends FriendListService
                       with PageService
                       with FeedService
                       with UserService {
