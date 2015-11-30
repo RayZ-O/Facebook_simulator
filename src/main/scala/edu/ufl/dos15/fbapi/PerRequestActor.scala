@@ -1,24 +1,21 @@
 package edu.ufl.dos15.fbapi
 
 import scala.concurrent.duration._
-import akka.actor.{Actor, ActorLogging, ActorRef, Props, ReceiveTimeout}
+import akka.actor.{Actor, ActorLogging, ActorSelection, Props, ReceiveTimeout}
 import akka.actor.OneForOneStrategy
 import akka.actor.SupervisorStrategy.Stop
-import spray.routing.RequestContext
 import spray.routing.HttpService
+import spray.routing.RequestContext
 import spray.http.StatusCode
 import spray.http.StatusCodes
-import spray.http.HttpEntity
-import spray.httpx.Json4sSupport
 import org.json4s._
 import org.json4s.native.JsonMethods._
 import org.json4s.native.Serialization
-import org.json4s.ext.EnumSerializer
 
-
-class PerRequestActor(ctx: RequestContext, db: ActorRef, message: Message)
+class PerRequestActor(ctx: RequestContext, message: Message)
     extends Actor with ActorLogging with Json4sProtocol {
-  var putId: String = _
+  val db = context.actorSelection("/user/db")
+  var objId: String = _
   var putObj: AnyRef = _
   var params: Option[String] = None
 
@@ -31,6 +28,7 @@ class PerRequestActor(ctx: RequestContext, db: ActorRef, message: Message)
   message match {
     case Get(id, p) =>
       context.become(timeoutBehaviour orElse waitingFetch)
+      objId = id
       params = p
       sendToDB(Fetch(id))
 
@@ -40,7 +38,7 @@ class PerRequestActor(ctx: RequestContext, db: ActorRef, message: Message)
 
     case Put(id, obj) =>
       context.become(timeoutBehaviour orElse waitingUpdatePhase1)
-      putId = id
+      objId = id
       putObj = obj
       db ! Fetch(id)
 
@@ -70,17 +68,17 @@ class PerRequestActor(ctx: RequestContext, db: ActorRef, message: Message)
     case DBReply(succ, content) =>
       succ match {
         case true =>
-          val json = parse(content.get)
+          import org.json4s.JsonDSL._
+          val json = (JObject() ~ ("id" -> objId)) merge parse(content.get)
           val result = params match {
             case Some(fields) =>
               val query = fields.split(",")
-              import org.json4s.JsonDSL._
               query.foldLeft(JObject()) { (res, name) =>
                 (res ~ (name -> json \ name)) }
             case None => json
           }
           complete(StatusCodes.OK, result)
-        case false => complete(StatusCodes.NotFound, "get error")
+        case false => complete(StatusCodes.NotFound, Error("get error"))
       }
   }
 
@@ -88,7 +86,7 @@ class PerRequestActor(ctx: RequestContext, db: ActorRef, message: Message)
     case DBReply(succ, id) =>
       succ match {
         case true => complete(StatusCodes.Created, HttpIdReply(id.get))
-        case false => complete(StatusCodes.BadRequest, "post error")
+        case false => complete(StatusCodes.BadRequest, Error("post error"))
       }
   }
 
@@ -96,13 +94,13 @@ class PerRequestActor(ctx: RequestContext, db: ActorRef, message: Message)
     case DBReply(succ, content) =>
       succ match {
         case true =>
-          context.become(timeoutBehaviour orElse waitingUpdatePhase1)
+          context.become(timeoutBehaviour orElse waitingUpdatePhase2)
           val value = Extraction.decompose(putObj)
           val json = parse(content.get)
           val updated = compact(render(json merge value))
-          db ! Update(putId, updated)
+          db ! Update(objId, updated)
 
-        case false => complete(StatusCodes.NotFound, "put-p1 error")
+        case false => complete(StatusCodes.NotFound, Error("put-p1 error"))
       }
   }
 
@@ -110,7 +108,7 @@ class PerRequestActor(ctx: RequestContext, db: ActorRef, message: Message)
     case DBReply(succ, content) =>
       succ match {
         case true => complete(StatusCodes.OK, HttpSuccessReply(succ))
-        case false => complete(StatusCodes.NotFound, "put-p2 error")
+        case false => complete(StatusCodes.NotFound, Error("put-p2 error"))
       }
   }
 
@@ -118,7 +116,7 @@ class PerRequestActor(ctx: RequestContext, db: ActorRef, message: Message)
     case DBReply(succ, content) =>
       succ match {
         case true => complete(StatusCodes.OK, HttpSuccessReply(succ))
-        case false => complete(StatusCodes.NotFound, "delete error")
+        case false => complete(StatusCodes.NotFound, Error("delete error"))
       }
   }
 
@@ -130,9 +128,8 @@ class PerRequestActor(ctx: RequestContext, db: ActorRef, message: Message)
 
 trait PerRequestFactory {
   this: HttpService =>
-  val db = actorRefFactory.actorSelection("/user/db")
   def handleRequest(ctx: RequestContext, msg: Message) = {
-    actorRefFactory.actorOf(Props(classOf[PerRequestActor], ctx, db, msg))
+    actorRefFactory.actorOf(Props(classOf[PerRequestActor], ctx, msg))
   }
 }
 

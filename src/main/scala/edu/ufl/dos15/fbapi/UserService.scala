@@ -35,21 +35,25 @@ trait UserService extends HttpService with PerRequestFactory with Json4sProtocol
       } ~
       (path("user") & post) {  // creates a user
         entity(as[User]) { user =>
+          println("post user")
           ctx => handleRequest(ctx, Post(user))
         }
       } ~
       pathPrefix("user" / Segment) { id => // gets infomation about a user
         get {
           parameter('fields.?) { fields =>
+            println("get user")
             ctx => handleRequest(ctx, Get(id, fields))
           }
-        }~
+        } ~
         put { // update a user
           entity(as[User]) { values =>
+            println("put user")
             ctx => handleRequest(ctx, Put(id, values))
           }
         } ~
         delete { // delete a user
+          println("delete user")
           ctx => handleRequest(ctx, Delete(id))
         }
       }

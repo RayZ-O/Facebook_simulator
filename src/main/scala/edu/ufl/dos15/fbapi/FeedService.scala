@@ -77,15 +77,15 @@ trait FeedService extends HttpService with PerRequestFactory with Json4sProtocol
     val feedCache = routeCache(maxCapacity = 1000, timeToIdle = Duration("30 min"))
 
     val feedRoute: Route = {
-      (path("page") & get) {
+      (path("feed") & get) {
         complete(StatusCodes.OK)
       } ~
-      (path("page") & post) {  // creates a post(feed)
+      (path("feed") & post) {  // creates a post(feed)
         entity(as[Feed]) { feed =>
           ctx => handleRequest(ctx, Post(feed))
         }
       } ~
-      pathPrefix("page" / Segment) { id => // gets infomation about a post(feed)
+      pathPrefix("feed" / Segment) { id => // gets infomation about a post(feed)
         get {
           parameter('fields.?) { fields =>
             ctx => handleRequest(ctx, Get(id, fields))

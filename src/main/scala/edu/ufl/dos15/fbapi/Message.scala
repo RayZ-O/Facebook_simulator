@@ -12,5 +12,6 @@ case class Delete(id: String) extends Message
 case class DBReply(success: Boolean, content: Option[String] = None) extends Message
 case class HttpSuccessReply(success: Boolean) extends Message
 case class HttpIdReply(id: String) extends Message
+case class Error(message: String) extends Message
 
 case class DBTestInsert(id: String, value: String) extends Message
