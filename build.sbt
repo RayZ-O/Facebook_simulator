@@ -28,6 +28,7 @@ libraryDependencies ++= Seq(
     "io.spray" %% "spray-can" % vspray,
     "io.spray" %% "spray-caching" % vspray,
     "io.spray" %% "spray-routing" % vspray,
+    "io.spray" %% "spray-client" % vspray,
     "io.spray" %% "spray-testkit" % vspray % "test",
     "org.specs2" %% "specs2" % "2.3.13" % "test",
     "org.json4s" %% "json4s-native" % vjson4s,
