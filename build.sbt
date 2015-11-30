@@ -8,6 +8,8 @@ scalaVersion := "2.11.7"
 
 scalacOptions ++= Seq("-feature", "-deprecation")
 
+parallelExecution in Test := false
+
 resolvers ++= Seq(
 	"RoundEights" at "http://maven.spikemark.net/roundeights",
  	"spray repo" at "http://repo.spray.io"

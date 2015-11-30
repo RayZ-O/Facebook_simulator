@@ -3,31 +3,28 @@ package edu.ufl.dos15.fbapi
 import org.specs2.mutable.{Specification, Before}
 import spray.testkit.Specs2RouteTest
 import spray.http.StatusCodes._
-import spray.http._
-import org.json4s._
-import org.json4s.native.JsonMethods._
-import org.json4s.native.Serialization.{read, write}
 import scala.concurrent.duration._
 import akka.actor.{ActorSystem, Props}
 
 class UserServiceSpec extends Specification with Specs2RouteTest with UserService with Before {
-    import UserService._
+  import UserService._
 
-    implicit val routeTestTimeout = RouteTestTimeout(FiniteDuration(5, SECONDS))
+  implicit val routeTestTimeout = RouteTestTimeout(FiniteDuration(5, SECONDS))
 
-    def actorRefFactory = system
+  def actorRefFactory = system
 
-    def before() = {
-      val db = system.actorOf(Props[MockDB], "db")
-      db ! DBTestInsert("1", """{"email": "ruizhang1011@ufl.edu",
-                                 "gender": "male",
-                                 "first_name": "Rui",
-                                 "last_name": "Zhang"}""")
-    }
+  def before() = {
+    val db = system.actorOf(Props[MockDB], "db")
+    println("test Insert")
+    db ! DBTestInsert("1", """{"email": "ruizhang1011@ufl.edu",
+                               "gender": "male",
+                               "first_name": "Rui",
+                               "last_name": "Zhang"}""")
+  }
 
-    sequential
+  sequential
 
-    "The UserService" should {
+  "The UserService" should {
 
     "return OK for GET requests to /user" in {
       Get("/user") ~> userRoute ~> check {
@@ -69,15 +66,6 @@ class UserServiceSpec extends Specification with Specs2RouteTest with UserServic
       }
     }
 
-    "return success for DELETE request to existed id" in {
-      Delete("/user/1") ~> userRoute ~> check {
-        response.status should be equalTo OK
-        response.entity should not be equalTo(None)
-        val reply = responseAs[HttpSuccessReply]
-        reply.success should be equalTo(true)
-      }
-    }
-
     "return specific fileds for GET request to /user/{id}?<fileds>" in {
       Get("/user/1?fields=email,gender") ~> userRoute ~> check {
         response.status should be equalTo OK
@@ -85,6 +73,15 @@ class UserServiceSpec extends Specification with Specs2RouteTest with UserServic
         val user = responseAs[User]
         user.email.getOrElse("") === "rayzhang1011@gmail.com"
         user.gender.getOrElse("") === "male"
+      }
+    }
+
+    "return success for DELETE request to existed id" in {
+      Delete("/user/1") ~> userRoute ~> check {
+        response.status should be equalTo OK
+        response.entity should not be equalTo(None)
+        val reply = responseAs[HttpSuccessReply]
+        reply.success should be equalTo(true)
       }
     }
 
@@ -105,9 +102,5 @@ class UserServiceSpec extends Specification with Specs2RouteTest with UserServic
         response.status should be equalTo NotFound
       }
     }
-
-
-
-
   }
 }

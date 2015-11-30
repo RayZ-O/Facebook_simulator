@@ -7,53 +7,60 @@ import spray.routing.HttpService
 import spray.http.StatusCodes
 
 object FriendListService {
-    case class FriendList (
-        id: String,                         //The friend list ID
-        name: String,                       //The name of the friend list
-        list_type: FriendListType.Value,    //The type of the friend list
-        owner: String)                      //The owner of the friend list
+  import UserService.User
 
-        object FriendListType extends Enumeration {
-            type FriendListType = Value
-            val CLOSE_FRIENDS,
-                ACQUAINTANCES,
-                RESTRICTED,
-                USER_CREATED,
-                EDUCATION,
-                WORK,
-                CURRENT_CITY,
-                FAMILY = Value
-        }
+  case class FriendList (
+    id: Option[String] = None,                         // The friend list ID
+    name: Option[String] = None,                       // The name of the friend list
+    list_type: Option[FriendListType.Value] = None,    // The type of the friend list
+    owner: Option[String] = None,                      // The owner of the friend list
+    data: Option[List[User]] = None,                   // Friends in the friend list
+    total_count: Option[Int] = None)                   // Total number of friends
+
+  object FriendListType extends Enumeration {
+    type FriendListType = Value
+    val CLOSE_FRIENDS,
+        ACQUAINTANCES,
+        RESTRICTED,
+        USER_CREATED,
+        EDUCATION,
+        WORK,
+        CURRENT_CITY,
+        FAMILY = Value
+  }
 }
 
 trait FriendListService extends HttpService with PerRequestFactory with Json4sProtocol {
-    import FriendListService._
+  import FriendListService._
 
-    val friendListCache = routeCache(maxCapacity = 1000, timeToIdle = Duration("30 min"))
+  val friendListCache = routeCache(maxCapacity = 1000, timeToIdle = Duration("30 min"))
 
-    val friendListRoute: Route = {
-      (path("friends") & get) {
-        complete(StatusCodes.OK)
-      } ~
-      (path("friends") & post) {  // creates a friend list
-        entity(as[FriendList]) { friendList =>
-          ctx => handleRequest(ctx, Post(friendList))
+  val friendListRoute: Route = {
+    (path("friends") & get) {
+      complete(StatusCodes.OK)
+    } ~
+    (path("friends") & post) {  // creates a friend list
+      entity(as[FriendList]) { friendList =>
+        ctx => handleRequest(ctx, Post(friendList))
+      }
+    } ~
+    pathPrefix("friends" / Segment) { id => // gets infomation about a friend list
+      get {
+        parameter('fields.?) { fields =>
+          ctx => handleRequest(ctx, Get(id, fields))
         }
-      } ~
-      pathPrefix("friends" / Segment) { id => // gets infomation about a friend list
-        get {
-          parameter('fields.?) { fields =>
-            ctx => handleRequest(ctx, Get(id, fields))
-          }
-        }~
-        put { // update a friends in a friend list
-          entity(as[FriendList]) { values =>
-            ctx => handleRequest(ctx, Put(id, values))
-          }
+      }~
+      put { // update a friends in a friend list
+        parameter('ids) { ids =>
+          ctx => handleRequest(ctx, Put(id, ids))
         } ~
-        delete { // delete a friend list
-          ctx => handleRequest(ctx, Delete(id))
+        entity(as[FriendList]) { values =>
+          ctx => handleRequest(ctx, Put(id, values))
         }
+      } ~
+      delete { // delete a friend list
+        ctx => handleRequest(ctx, Delete(id))
       }
     }
+  }
 }
