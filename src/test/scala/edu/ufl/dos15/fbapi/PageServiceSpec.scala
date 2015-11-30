@@ -68,7 +68,7 @@ class PageServiceSpec extends Specification with Specs2RouteTest with PageServic
     }
 
     "return id for POST requests to /page/{id}/feed" in {
-      Post("/page/1/feed", Feed(message=Some("I am happy today"))) ~> pageRoute ~> check {
+      Post("/page/21/feed", Feed(message=Some("I am happy today"))) ~> pageRoute ~> check {
         response.status should be equalTo Created
         response.entity should not be equalTo(None)
         val reply = responseAs[HttpIdReply]

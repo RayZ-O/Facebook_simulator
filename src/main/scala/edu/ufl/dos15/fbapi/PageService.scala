@@ -31,6 +31,7 @@ object PageService {
 trait PageService extends HttpService with PerRequestFactory with Json4sProtocol {
   import PageService._
   import FeedService._
+  import FriendListService._
 
   val pageCache = routeCache(maxCapacity = 1000, timeToIdle = Duration("30 min"))
 
@@ -46,7 +47,12 @@ trait PageService extends HttpService with PerRequestFactory with Json4sProtocol
     pathPrefix("page" / Segment) { id => // gets infomation about a page
       (path("feed") & post) {  // creates a post(feed)
         entity(as[Feed]) { feed =>
-          ctx => handleRequest(ctx, Post(feed.addFromAndCreatedTime(id)))
+          ctx => handleRequest(ctx, EdgePost(id, feed.addFromAndCreatedTime(id)))
+        }
+      } ~
+      (path("friends") & post) {  // creates a friend list
+        entity(as[FriendList]) { friendList =>
+          ctx => handleRequest(ctx, EdgePost(id, friendList.addOwner(id)))
         }
       } ~
       get {

@@ -14,8 +14,13 @@ object FriendListService {
     name: Option[String] = None,                       // The name of the friend list
     list_type: Option[FriendListType.Value] = None,    // The type of the friend list
     owner: Option[String] = None,                      // The owner of the friend list
-    data: Option[List[User]] = None,                   // Friends in the friend list
-    total_count: Option[Int] = None)                   // Total number of friends
+    data: Option[List[String]] = None,                 // Friends in the friend list
+    total_count: Option[Int] = None) {                 // Total number of friends
+
+    def addOwner(id: String) = {
+      this.copy(owner = Some(id))
+    }
+  }
 
   object FriendListType extends Enumeration {
     type FriendListType = Value
@@ -39,11 +44,6 @@ trait FriendListService extends HttpService with PerRequestFactory with Json4sPr
     (path("friends") & get) {
       complete(StatusCodes.OK)
     } ~
-    (path("friends") & post) {  // creates a friend list
-      entity(as[FriendList]) { friendList =>
-        ctx => handleRequest(ctx, Post(friendList))
-      }
-    } ~
     pathPrefix("friends" / Segment) { id => // gets infomation about a friend list
       get {
         parameter('fields.?) { fields =>
@@ -52,7 +52,7 @@ trait FriendListService extends HttpService with PerRequestFactory with Json4sPr
       } ~
       put { // update a friends in a friend list
         parameter('ids) { ids =>
-          ctx => handleRequest(ctx, Put(id, ids))
+          ctx => handleRequest(ctx, PutList(id, ids))
         } ~
         entity(as[FriendList]) { values =>
           ctx => handleRequest(ctx, Put(id, values))

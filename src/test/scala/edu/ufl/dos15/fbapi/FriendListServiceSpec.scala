@@ -28,15 +28,6 @@ class FriendListServiceSpec extends Specification with Specs2RouteTest with Frie
       }
     }
 
-    "return id for POST requests to /friends" in {
-      Post("/friends", FriendList()) ~> friendListRoute ~> check {
-        response.status should be equalTo Created
-        response.entity should not be equalTo(None)
-        val reply = responseAs[HttpIdReply]
-        reply.id.equals("") should be equalTo(false)
-      }
-    }
-
     "return all fileds for GET request to /friends/{id}" in {
       Get("/friends/41") ~> friendListRoute ~> check {
         response.status should be equalTo OK
@@ -48,7 +39,7 @@ class FriendListServiceSpec extends Specification with Specs2RouteTest with Frie
       }
     }
 
-    "return success for PUT request to existed id" in {
+    "return success for PUT request to existed id with Json body" in {
       Put("/friends/41", FriendList(name=Some("myfriends"))) ~> friendListRoute ~> check {
         response.status should be equalTo OK
         response.entity should not be equalTo(None)
@@ -57,12 +48,22 @@ class FriendListServiceSpec extends Specification with Specs2RouteTest with Frie
       }
     }
 
+    "return success for PUT request to existed id with parameter" in {
+      Put("/friends/41?ids=1234,2345,3456") ~> friendListRoute ~> check {
+        response.status should be equalTo OK
+        response.entity should not be equalTo(None)
+        val reply = responseAs[HttpSuccessReply]
+        reply.success should be equalTo(true)
+      }
+    }
+
     "return specific fileds for GET request to /friends/{id}?<fileds>" in {
-      Get("/friends/41?fields=name") ~> friendListRoute ~> check {
+      Get("/friends/41?fields=name,total_count") ~> friendListRoute ~> check {
         response.status should be equalTo OK
         response.entity should not be equalTo(None)
         val friends = responseAs[FriendList]
         friends.name.getOrElse("") === "myfriends"
+        friends.total_count.getOrElse(0) should be equalTo(3)
       }
     }
 

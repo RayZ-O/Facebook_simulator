@@ -17,6 +17,7 @@ class PerRequestActor(ctx: RequestContext, message: Message)
   val db = context.actorSelection("/user/db")
   var objId: String = _
   var putObj: AnyRef = _
+  var idList: List[String] = List.empty
   var params: Option[String] = None
 
   val timeoutBehaviour: Receive = {
@@ -36,10 +37,20 @@ class PerRequestActor(ctx: RequestContext, message: Message)
       context.become(timeoutBehaviour orElse waitingInsert)
       sendToDB(Insert(Serialization.write(obj)))
 
+    case EdgePost(id, obj) =>
+      context.become(timeoutBehaviour orElse waitingInsert)
+      sendToDB(EdgeInsert(id, Serialization.write(obj)))
+
     case Put(id, obj) =>
-      context.become(timeoutBehaviour orElse waitingUpdatePhase1)
+      context.become(timeoutBehaviour orElse waitingUpdateFetch)
       objId = id
       putObj = obj
+      db ! Fetch(id)
+
+    case PutList(id, ids) =>
+      context.become(timeoutBehaviour orElse waitingFetchFriend)
+      objId = id
+      idList = ids.split(",").toList
       db ! Fetch(id)
 
     case d: Delete =>
@@ -90,11 +101,11 @@ class PerRequestActor(ctx: RequestContext, message: Message)
       }
   }
 
-  def waitingUpdatePhase1: Receive = {
+  def waitingUpdateFetch: Receive = {
     case DBReply(succ, content) =>
       succ match {
         case true =>
-          context.become(timeoutBehaviour orElse waitingUpdatePhase2)
+          context.become(timeoutBehaviour orElse waitingUpdate)
           val value = Extraction.decompose(putObj)
           val json = parse(content.get)
           val updated = compact(render(json merge value))
@@ -104,7 +115,30 @@ class PerRequestActor(ctx: RequestContext, message: Message)
       }
   }
 
-  def waitingUpdatePhase2: Receive = {
+  def waitingFetchFriend: Receive = {
+    case DBReply(succ, content) =>
+      succ match {
+        case true =>
+          context.become(timeoutBehaviour orElse waitingUpdate)
+          import org.json4s.JsonDSL._
+          val json = parse(content.get)
+          val newValue = if (json \ "data" == JNothing) {
+            (idList, idList.length)
+          } else {
+            val data = (json \ "data").extract[List[String]]
+            val newIds = idList.filter { id => !data.contains(id) }
+            val newCount = newIds.length + data.length
+            (newIds, newCount)
+          }
+          val newField = ("data" -> newValue._1) ~ ("total_count" -> newValue._2)
+          val updated = compact(render(json merge newField))
+          db ! Update(objId, updated)
+
+        case false => complete(StatusCodes.NotFound, Error("put-p1 error"))
+      }
+  }
+
+  def waitingUpdate: Receive = {
     case DBReply(succ, content) =>
       succ match {
         case true => complete(StatusCodes.OK, HttpSuccessReply(succ))

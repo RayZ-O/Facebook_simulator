@@ -18,11 +18,15 @@ class MockDB extends Actor with ActorLogging {
         }
 
       case Insert(value) =>
-        count += 1
-        val id = System.currentTimeMillis().toString + count
-        db += (id -> value)
 //        log.info(s"insert $id -> $value")
-        sender ! DBReply(true, Some(id))
+        sender ! DBReply(true, Some(insert(value)))
+
+      case EdgeInsert(id, value) =>
+        if (db.contains(id)) {
+          sender ! DBReply(true, Some(insert(value)))
+        } else {
+          sender ! DBReply(false)
+        }
 
       case Update(id, newValue) =>
 //        log.info(s"update $id to $newValue")
@@ -48,5 +52,12 @@ class MockDB extends Actor with ActorLogging {
           count += 1
           db += (id -> value)
         }
+    }
+
+    def insert(value: String) = {
+      count += 1
+      val id = System.currentTimeMillis().toString + count
+      db += (id -> value)
+      id
     }
 }
