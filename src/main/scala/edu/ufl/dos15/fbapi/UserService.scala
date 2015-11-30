@@ -5,11 +5,6 @@ import spray.routing.Route
 import spray.routing.directives.CachingDirectives._
 import spray.routing.HttpService
 import spray.http.StatusCodes
-import spray.routing.RequestContext
-import org.json4s._
-import org.json4s.native.JsonMethods._
-import org.json4s.native.Serialization.write
-import akka.actor.Props
 
 object UserService {
     import PageService.Page
@@ -29,8 +24,7 @@ object UserService {
         location: Option[Page] = None)       // The person's current location
 }
 
-trait UserService extends HttpService with PerRequestFactory {
-    import Json4sProtocol._
+trait UserService extends HttpService with PerRequestFactory with Json4sProtocol {
     import UserService._
 
     val userCache = routeCache(maxCapacity = 1000, timeToIdle = Duration("30 min"))

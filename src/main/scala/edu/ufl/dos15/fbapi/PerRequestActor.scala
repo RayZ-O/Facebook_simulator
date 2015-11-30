@@ -5,6 +5,7 @@ import akka.actor.{Actor, ActorLogging, ActorRef, Props, ReceiveTimeout}
 import akka.actor.OneForOneStrategy
 import akka.actor.SupervisorStrategy.Stop
 import spray.routing.RequestContext
+import spray.routing.HttpService
 import spray.http.StatusCode
 import spray.http.StatusCodes
 import spray.http.HttpEntity
@@ -12,13 +13,11 @@ import spray.httpx.Json4sSupport
 import org.json4s._
 import org.json4s.native.JsonMethods._
 import org.json4s.native.Serialization
-import spray.routing.HttpService
+import org.json4s.ext.EnumSerializer
 
 
 class PerRequestActor(ctx: RequestContext, db: ActorRef, message: Message)
-    extends Actor with ActorLogging with Json4sSupport {
-  implicit def json4sFormats: Formats = DefaultFormats
-
+    extends Actor with ActorLogging with Json4sProtocol {
   var putId: String = _
   var putObj: AnyRef = _
   var params: Option[String] = None
@@ -130,10 +129,10 @@ class PerRequestActor(ctx: RequestContext, db: ActorRef, message: Message)
 }
 
 trait PerRequestFactory {
-    this: HttpService =>
-    val db = actorRefFactory.actorSelection("/db")
-    def handleRequest(ctx: RequestContext, msg: Message) = {
-      actorRefFactory.actorOf(Props(classOf[PerRequestActor], ctx, db, msg))
-    }
+  this: HttpService =>
+  val db = actorRefFactory.actorSelection("/user/db")
+  def handleRequest(ctx: RequestContext, msg: Message) = {
+    actorRefFactory.actorOf(Props(classOf[PerRequestActor], ctx, db, msg))
+  }
 }
 

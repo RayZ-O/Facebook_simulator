@@ -5,12 +5,6 @@ import spray.routing.Route
 import spray.routing.directives.CachingDirectives._
 import spray.routing.HttpService
 import spray.http.StatusCodes
-import spray.routing.RequestContext
-import org.json4s._
-import org.json4s.native.JsonMethods._
-import org.json4s.native.Serialization.write
-import akka.actor.Props
-
 
 object FriendListService {
     case class FriendList (
@@ -32,8 +26,7 @@ object FriendListService {
         }
 }
 
-trait FriendListService extends HttpService with PerRequestFactory {
-    import Json4sProtocol._
+trait FriendListService extends HttpService with PerRequestFactory with Json4sProtocol {
     import FriendListService._
 
     val friendListCache = routeCache(maxCapacity = 1000, timeToIdle = Duration("30 min"))
@@ -42,23 +35,23 @@ trait FriendListService extends HttpService with PerRequestFactory {
       (path("friends") & get) {
         complete(StatusCodes.OK)
       } ~
-      (path("friends") & post) {  // creates a user
+      (path("friends") & post) {  // creates a friend list
         entity(as[FriendList]) { friendList =>
           ctx => handleRequest(ctx, Post(friendList))
         }
       } ~
-      pathPrefix("friends" / Segment) { id => // gets infomation about a user
+      pathPrefix("friends" / Segment) { id => // gets infomation about a friend list
         get {
           parameter('fields.?) { fields =>
             ctx => handleRequest(ctx, Get(id, fields))
           }
         }~
-        put { // update a user
+        put { // update a friends in a friend list
           entity(as[FriendList]) { values =>
             ctx => handleRequest(ctx, Put(id, values))
           }
         } ~
-        delete { // delete a user
+        delete { // delete a friend list
           ctx => handleRequest(ctx, Delete(id))
         }
       }

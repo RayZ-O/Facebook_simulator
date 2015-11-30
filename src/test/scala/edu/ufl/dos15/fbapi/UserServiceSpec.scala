@@ -1,6 +1,7 @@
 package edu.ufl.dos15.fbapi
 
 import org.specs2.mutable.Specification
+import org.specs2.mutable.Before
 import spray.testkit.Specs2RouteTest
 import spray.http.StatusCodes._
 import spray.http._
@@ -8,20 +9,16 @@ import org.json4s._
 import org.json4s.native.JsonMethods._
 import org.json4s.native.Serialization.{read, write}
 
-class UserServiceSpec extends Specification with Specs2RouteTest with UserService {
-    import Json4sProtocol._
+class UserServiceSpec extends Specification with Specs2RouteTest with UserService with Before {
     import UserService._
 
     def actorRefFactory = system
 
-    var id: String = _
-    val db = system.actorSelection("/db")
-
-    def beforeAll = {
-      db ! Insert("""{"email": "ruizhang1011@ufl.edu",
-                      "gender": "male",
-                      "first_name": "Rui",
-                      "last_name": "Zhang"}""")
+    def before() = {
+      db ! DBTestInsert("1", """{"email": "ruizhang1011@ufl.edu",
+                                 "gender": "male",
+                                 "first_name": "Rui",
+                                 "last_name": "Zhang"}""")
     }
 
     "The UserService" should {
@@ -46,10 +43,10 @@ class UserServiceSpec extends Specification with Specs2RouteTest with UserServic
     }
 
     "return all fileds for GET request to /user/{id}" in {
-      Get(s"/user/$id") ~> userRoute ~> check {
+      Get(s"/user/1") ~> userRoute ~> check {
         response.status should be equalTo OK
         val user = read[User](responseAs[String])
-        user === User(id=Some(id),
+        user === User(id=Some("1"),
                       email=Some("ruizhang1011@ufl.edu"),
                       gender=Some("male"),
                       first_name=Some("Rui"),
@@ -58,7 +55,7 @@ class UserServiceSpec extends Specification with Specs2RouteTest with UserServic
     }
 
     "return success for PUT request to existed id" in {
-      Put(s"/user/$id", HttpEntity(MediaTypes.`application/json`,
+      Put(s"/user/1", HttpEntity(MediaTypes.`application/json`,
           write(User(email=Some("rayzhang1011@gmail.com"))))) ~> userRoute ~> check {
         response.status should be equalTo OK
         val json = parse(responseAs[String])
@@ -67,14 +64,14 @@ class UserServiceSpec extends Specification with Specs2RouteTest with UserServic
     }
 
     "return NotFound for PUT request to non-existed id" in {
-      Put("/user/1", HttpEntity(MediaTypes.`application/json`,
+      Put("/user/2", HttpEntity(MediaTypes.`application/json`,
           write(User(email=Some("rayzhang1011@gmail.com"))))) ~> userRoute ~> check {
         response.status should be equalTo NotFound
       }
     }
 
     "return specific fileds for GET request to /user/{id}?<fileds>" in {
-      Get(s"/user/$id?fields=email,gender") ~> userRoute ~> check {
+      Get(s"/user/1?fields=email,gender") ~> userRoute ~> check {
         response.status should be equalTo OK
         val json = parse(responseAs[String])
         json \ "email" === "rayzhang1011@gmail.com"

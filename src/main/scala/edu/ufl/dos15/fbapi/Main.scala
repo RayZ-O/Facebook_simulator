@@ -3,9 +3,8 @@ package edu.ufl.dos15.fbapi
 import scala.util.Try
 import akka.actor.{ActorSystem, Props}
 import akka.io.IO
-import com.typesafe.config.ConfigFactory
 import spray.can.Http
-
+import com.typesafe.config.ConfigFactory
 
 object Main {
     def main(args: Array[String]): Unit = {

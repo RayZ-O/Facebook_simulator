@@ -5,11 +5,6 @@ import spray.routing.Route
 import spray.routing.directives.CachingDirectives._
 import spray.routing.HttpService
 import spray.http.StatusCodes
-import spray.routing.RequestContext
-import org.json4s._
-import org.json4s.native.JsonMethods._
-import org.json4s.native.Serialization.write
-import akka.actor.Props
 
 object FeedService {
     import UserService.User
@@ -76,8 +71,7 @@ object FeedService {
     }
 }
 
-trait FeedService extends HttpService with PerRequestFactory {
-    import Json4sProtocol._
+trait FeedService extends HttpService with PerRequestFactory with Json4sProtocol {
     import FeedService._
 
     val feedCache = routeCache(maxCapacity = 1000, timeToIdle = Duration("30 min"))
@@ -86,23 +80,23 @@ trait FeedService extends HttpService with PerRequestFactory {
       (path("page") & get) {
         complete(StatusCodes.OK)
       } ~
-      (path("page") & post) {  // creates a user
+      (path("page") & post) {  // creates a post(feed)
         entity(as[Feed]) { feed =>
           ctx => handleRequest(ctx, Post(feed))
         }
       } ~
-      pathPrefix("page" / Segment) { id => // gets infomation about a user
+      pathPrefix("page" / Segment) { id => // gets infomation about a post(feed)
         get {
           parameter('fields.?) { fields =>
             ctx => handleRequest(ctx, Get(id, fields))
           }
         }~
-        put { // update a user
+        put { // update a post(feed)
           entity(as[Feed]) { values =>
             ctx => handleRequest(ctx, Put(id, values))
           }
         } ~
-        delete { // delete a user
+        delete { // delete a post(feed)
           ctx => handleRequest(ctx, Delete(id))
         }
       }

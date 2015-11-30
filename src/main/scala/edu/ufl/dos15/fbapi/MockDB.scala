@@ -9,6 +9,7 @@ class MockDB extends Actor with ActorLogging {
 
     def receive: Receive = {
       case Fetch(id) =>
+        log.info(s"fetch $id")
         db.get(id) match {
           case Some(value) =>
             sender ! DBReply(true, Some(value))
@@ -20,23 +21,32 @@ class MockDB extends Actor with ActorLogging {
         count += 1
         val id = System.currentTimeMillis().toString + count
         db += (id -> value)
+        log.info(s"insert $id -> $value")
         sender ! DBReply(true, Some(id))
 
-      case Update(id: String, value: String) =>
-        db.get(id) match {
-          case Some(value) =>
-            db += (id -> value)
-            sender ! DBReply(true)
-          case None =>
-            sender ! DBReply(false)
+      case Update(id, newValue) =>
+        log.info(s"update $id to $newValue")
+        if (db.contains(id)) {
+          db += (id -> newValue)
+          sender ! DBReply(true)
+        } else {
+          sender ! DBReply(false)
         }
 
-      case Delete(id: String) =>
+      case Delete(id) =>
+        log.info(s"delete $id")
         if (db.contains(id)) {
           db -= id
           sender ! DBReply(true)
         } else {
           sender ! DBReply(false)
+        }
+
+      case DBTestInsert(id, value) =>
+        log.info(s"test insert $id -> $value, count = $count")
+        if (!db.contains(id)) {
+          count += 1
+          db += (id -> value)
         }
     }
 }
