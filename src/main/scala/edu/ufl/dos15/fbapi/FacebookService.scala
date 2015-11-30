@@ -20,6 +20,5 @@ trait Json4sProtocol extends Json4sSupport {
     implicit def json4sFormats: Formats = DefaultFormats +
                                           new EnumSerializer(FriendListService.FriendListType) +
                                           new EnumSerializer(FeedService.PrivacyType) +
-                                          new EnumSerializer(FeedService.StatusType) +
                                           new EnumSerializer(FeedService.FeedType)
 }

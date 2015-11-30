@@ -49,7 +49,7 @@ trait FriendListService extends HttpService with PerRequestFactory with Json4sPr
         parameter('fields.?) { fields =>
           ctx => handleRequest(ctx, Get(id, fields))
         }
-      }~
+      } ~
       put { // update a friends in a friend list
         parameter('ids) { ids =>
           ctx => handleRequest(ctx, Put(id, ids))

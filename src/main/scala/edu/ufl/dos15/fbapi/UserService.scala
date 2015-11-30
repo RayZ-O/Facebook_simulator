@@ -15,7 +15,7 @@ case class User (
   gender: Option[String] = None,       // The gender selected by this person, male or female
   first_name: Option[String] = None,   // The person's first name
   last_name: Option[String] = None,    // The person's last name
-  verified: Boolean = false,    // Indicates whether the account has been verified
+  verified: Option[Boolean] = None,    // Indicates whether the account has been verified
   middle_name: Option[String] = None,  // The person's middle name
   birthday: Option[String] = None,  // The person's birthday. MM/DD/YYYY
   link: Option[String] = None,     // A link to the person's Timeline
@@ -26,6 +26,7 @@ case class User (
 
 trait UserService extends HttpService with PerRequestFactory with Json4sProtocol {
   import UserService._
+  import FeedService.Feed
 
   val userCache = routeCache(maxCapacity = 1000, timeToIdle = Duration("30 min"))
 
@@ -39,6 +40,11 @@ trait UserService extends HttpService with PerRequestFactory with Json4sProtocol
       }
     } ~
     pathPrefix("user" / Segment) { id => // gets infomation about a user
+      (path("feed") & post) {  // creates a post(feed)
+        entity(as[Feed]) { feed =>
+          ctx => handleRequest(ctx, Post(feed.addFromAndCreatedTime(id)))
+        }
+      } ~
       get {
         parameter('fields.?) { fields =>
           ctx => handleRequest(ctx, Get(id, fields))

@@ -8,6 +8,7 @@ import akka.actor.{ActorSystem, Props}
 
 class UserServiceSpec extends Specification with Specs2RouteTest with UserService with Before {
   import UserService._
+  import FeedService._
 
   implicit val routeTestTimeout = RouteTestTimeout(FiniteDuration(5, SECONDS))
 
@@ -15,7 +16,6 @@ class UserServiceSpec extends Specification with Specs2RouteTest with UserServic
 
   def before() = {
     val db = system.actorOf(Props[MockDB], "db")
-    println("test Insert")
     db ! DBTestInsert("1", """{"email": "ruizhang1011@ufl.edu",
                                "gender": "male",
                                "first_name": "Rui",
@@ -73,6 +73,15 @@ class UserServiceSpec extends Specification with Specs2RouteTest with UserServic
         val user = responseAs[User]
         user.email.getOrElse("") === "rayzhang1011@gmail.com"
         user.gender.getOrElse("") === "male"
+      }
+    }
+
+    "return id for POST requests to /user/{id}/feed" in {
+      Post("/user/1/feed", Feed(message=Some("I am happy today"))) ~> userRoute ~> check {
+        response.status should be equalTo Created
+        response.entity should not be equalTo(None)
+        val reply = responseAs[HttpIdReply]
+        reply.id.equals("") should be equalTo(false)
       }
     }
 

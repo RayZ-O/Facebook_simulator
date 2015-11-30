@@ -8,6 +8,7 @@ import akka.actor.{ActorSystem, Props}
 
 class PageServiceSpec extends Specification with Specs2RouteTest with PageService with Before{
   import PageService._
+  import FeedService._
 
   implicit val routeTestTimeout = RouteTestTimeout(FiniteDuration(5, SECONDS))
 
@@ -63,6 +64,15 @@ class PageServiceSpec extends Specification with Specs2RouteTest with PageServic
         response.entity should not be equalTo(None)
         val page = responseAs[Page]
         page.name.getOrElse("") === "mypage"
+      }
+    }
+
+    "return id for POST requests to /page/{id}/feed" in {
+      Post("/page/1/feed", Feed(message=Some("I am happy today"))) ~> pageRoute ~> check {
+        response.status should be equalTo Created
+        response.entity should not be equalTo(None)
+        val reply = responseAs[HttpIdReply]
+        reply.id.equals("") should be equalTo(false)
       }
     }
 

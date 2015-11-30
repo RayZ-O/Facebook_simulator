@@ -15,6 +15,15 @@ object Main {
         implicit val system = ActorSystem("FacebookSystem")
         val db = system.actorOf(Props[MockDB], "db")
         val server = system.actorOf(Props[Server], "server")
+
+        import edu.ufl.dos15.fbapi.FriendListService._
+        import edu.ufl.dos15.fbapi.FriendListService.FriendListType.CLOSE_FRIENDS
+        import org.json4s.native.Serialization
+        import org.json4s._
+        import org.json4s.ext.EnumSerializer
+        implicit def json4sFormats: Formats = DefaultFormats +
+                                          new EnumSerializer(FriendListService.FriendListType)
+        db ! DBTestInsert("1", Serialization.write(FriendList(name=Some("ss"),list_type=Some(CLOSE_FRIENDS))))
         IO(Http) ! Http.Bind(server, serverHost, serverPort)
     }
 }

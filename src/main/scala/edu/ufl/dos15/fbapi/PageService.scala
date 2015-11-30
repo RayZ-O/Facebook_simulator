@@ -13,10 +13,8 @@ object PageService {
     description: Option[String] = None,  // The description of the Page
     link: Option[String] = None,         // The Page's Facebook URL
     name: Option[String] = None,         // The name of the Page
-    username: Option[String] = None,     // The alias of the Page
     likes: Option[Int] = None,           // The number of users who like the Page
-    location: Option[Location] = None,   // The location of this place. Applicable to all Places
-    parent_page: Option[Page] = None)    // Parent Page for this Page
+    location: Option[Location] = None)   // The location of this place. Applicable to all Places
 
   case class Location (
     city: Option[String] = None,
@@ -32,6 +30,7 @@ object PageService {
 
 trait PageService extends HttpService with PerRequestFactory with Json4sProtocol {
   import PageService._
+  import FeedService._
 
   val pageCache = routeCache(maxCapacity = 1000, timeToIdle = Duration("30 min"))
 
@@ -45,11 +44,16 @@ trait PageService extends HttpService with PerRequestFactory with Json4sProtocol
       }
     } ~
     pathPrefix("page" / Segment) { id => // gets infomation about a page
+      (path("feed") & post) {  // creates a post(feed)
+        entity(as[Feed]) { feed =>
+          ctx => handleRequest(ctx, Post(feed.addFromAndCreatedTime(id)))
+        }
+      } ~
       get {
         parameter('fields.?) { fields =>
           ctx => handleRequest(ctx, Get(id, fields))
         }
-      }~
+      } ~
       put { // update a page
         entity(as[Page]) { values =>
           ctx => handleRequest(ctx, Put(id, values))

@@ -28,15 +28,6 @@ class FeedServiceSpec extends Specification with Specs2RouteTest with FeedServic
       }
     }
 
-    "return id for POST requests to /feed" in {
-      Post("/feed", Feed()) ~> feedRoute ~> check {
-        response.status should be equalTo Created
-        response.entity should not be equalTo(None)
-        val reply = responseAs[HttpIdReply]
-        reply.id.equals("") should be equalTo(false)
-      }
-    }
-
     "return all fileds for GET request to /feed/{id}" in {
       Get("/feed/31") ~> feedRoute ~> check {
         response.status should be equalTo OK

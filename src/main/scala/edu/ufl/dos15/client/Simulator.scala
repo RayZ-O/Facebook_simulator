@@ -9,7 +9,8 @@ class Simulator(host: String, port: Int) extends Actor with ActorLogging {
   def receive: Receive = {
     case Start =>
       log.info("Simulator start")
-      val client = context.actorOf(Props[Client])
+      val id = "TODO"
+      val client = context.actorOf(Props[Client], id)
       client ! Start
 
     case _ =>
