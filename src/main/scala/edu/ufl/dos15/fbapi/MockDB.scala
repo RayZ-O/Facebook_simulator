@@ -2,9 +2,12 @@ package edu.ufl.dos15.fbapi
 
 import akka.actor.{Actor, ActorLogging}
 
+
 class MockDB extends Actor with ActorLogging {
     import scala.collection.mutable.HashMap
     private var db = new HashMap[String, String]
+    import scala.collection.mutable.ListBuffer
+    private var posts = new ListBuffer[String]
     private var count = 0;
 
     def receive: Receive = {
@@ -17,13 +20,20 @@ class MockDB extends Actor with ActorLogging {
             sender ! DBReply(false)
         }
 
+      case GetNewPosts() =>
+        println(posts.take(10).toList)
+        sender ! PostReply(posts.take(10).toList)
+
       case Insert(value) =>
 //        log.info(s"insert $id -> $value")
         sender ! DBReply(true, Some(insert(value)))
 
-      case EdgeInsert(id, value) =>
+      case EdgeInsert(id, value, post) =>
         if (db.contains(id)) {
           sender ! DBReply(true, Some(insert(value)))
+          if (post == true) {
+            id +=: posts
+          }
         } else {
           sender ! DBReply(false)
         }

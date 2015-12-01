@@ -47,12 +47,12 @@ trait PageService extends HttpService with PerRequestFactory with Json4sProtocol
     pathPrefix("page" / Segment) { id => // gets infomation about a page
       (path("feed") & post) {  // creates a post(feed)
         entity(as[Feed]) { feed =>
-          ctx => handleRequest(ctx, EdgePost(id, feed.addFromAndCreatedTime(id)))
+          ctx => handleRequest(ctx, EdgePost(id, feed.addFromAndCreatedTime(id), true))
         }
       } ~
       (path("friends") & post) {  // creates a friend list
         entity(as[FriendList]) { friendList =>
-          ctx => handleRequest(ctx, EdgePost(id, friendList.addOwner(id)))
+          ctx => handleRequest(ctx, EdgePost(id, friendList.addOwner(id), false))
         }
       } ~
       get {

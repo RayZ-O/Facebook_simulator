@@ -33,13 +33,17 @@ class PerRequestActor(ctx: RequestContext, message: Message)
       params = p
       sendToDB(Fetch(id))
 
+    case g: GetNewPosts =>
+      context.become(timeoutBehaviour orElse waitingNewPosts)
+      sendToDB(g)
+
     case Post(obj) =>
       context.become(timeoutBehaviour orElse waitingInsert)
       sendToDB(Insert(Serialization.write(obj)))
 
-    case EdgePost(id, obj) =>
+    case EdgePost(id, obj, post) =>
       context.become(timeoutBehaviour orElse waitingInsert)
-      sendToDB(EdgeInsert(id, Serialization.write(obj)))
+      sendToDB(EdgeInsert(id, Serialization.write(obj), post))
 
     case Put(id, obj) =>
       context.become(timeoutBehaviour orElse waitingUpdateFetch)
@@ -91,6 +95,11 @@ class PerRequestActor(ctx: RequestContext, message: Message)
           complete(StatusCodes.OK, result)
         case false => complete(StatusCodes.NotFound, Error("get error"))
       }
+  }
+
+  def waitingNewPosts: Receive = {
+    case PostReply(posts) =>
+      complete(StatusCodes.OK, HttpListReply(posts))
   }
 
   def waitingInsert: Receive = {

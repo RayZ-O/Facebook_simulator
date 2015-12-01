@@ -63,6 +63,9 @@ trait FeedService extends HttpService with PerRequestFactory with Json4sProtocol
     (path("feed") & get) {
       complete(StatusCodes.OK)
     } ~
+    (path("feed" / "new") & get) {
+      ctx => handleRequest(ctx, GetNewPosts())
+    } ~
     pathPrefix("feed" / Segment) { id => // gets infomation about a post(feed)
       get {
         parameter('fields.?) { fields =>
