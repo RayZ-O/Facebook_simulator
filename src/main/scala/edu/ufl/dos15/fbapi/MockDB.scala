@@ -30,9 +30,10 @@ class MockDB extends Actor with ActorLogging {
 
       case EdgeInsert(id, value, post) =>
         if (db.contains(id)) {
-          sender ! DBReply(true, Some(insert(value)))
+          val insertedId = insert(value)
+          sender ! DBReply(true, Some(insertedId))
           if (post == true) {
-            id +=: posts
+            insertedId +=: posts
           }
         } else {
           sender ! DBReply(false)
