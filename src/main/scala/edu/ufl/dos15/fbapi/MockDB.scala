@@ -2,7 +2,6 @@ package edu.ufl.dos15.fbapi
 
 import akka.actor.{Actor, ActorLogging}
 
-
 class MockDB extends Actor with ActorLogging {
     import scala.collection.mutable.HashMap
     private var db = new HashMap[String, String]

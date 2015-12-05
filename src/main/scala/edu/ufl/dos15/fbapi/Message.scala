@@ -10,6 +10,7 @@ case class Put(id: String, obj: AnyRef) extends Message
 case class PutList(id: String, ids: String) extends Message
 case class HttpSuccessReply(success: Boolean) extends Message
 case class HttpIdReply(id: String) extends Message
+case class HttpTokenReply(token: String) extends Message
 case class HttpListReply(data: List[String]) extends Message
 case class Error(message: String) extends Message
 // databse message
@@ -24,3 +25,8 @@ case class DBTestInsert(id: String, value: String) extends Message
 // common
 case class Delete(id: String) extends Message
 case class DeleteMul(id: String, ids: Array[String]) extends Message
+case object Tick extends Message
+// auth message
+case class Register(username: String, passwd: String, pubKey: String) extends Message
+case class PassWdAuth(username: String, passwd: String) extends Message
+case class TokenAuth(token: String) extends Message

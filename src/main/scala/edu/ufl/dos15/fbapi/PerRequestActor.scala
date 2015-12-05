@@ -12,19 +12,15 @@ import org.json4s._
 import org.json4s.native.JsonMethods._
 import org.json4s.native.Serialization
 
-class PerRequestActor(ctx: RequestContext, message: Message)
-    extends Actor with ActorLogging with Json4sProtocol {
+class PerRequestActor(reqctx: RequestContext, message: Message) extends Actor
+    with ActorLogging with Json4sProtocol with RequestHandler {
   val db = context.actorSelection("/user/db")
+  val ctx = reqctx
+
   var objId: String = _
   var putObj: AnyRef = _
   var idList: List[String] = List.empty
   var params: Option[String] = None
-
-  val timeoutBehaviour: Receive = {
-    case ReceiveTimeout => complete(StatusCodes.GatewayTimeout, "Server time out")
-  }
-
-  def receive = timeoutBehaviour
 
   message match {
     case Get(id, p) =>
@@ -49,13 +45,13 @@ class PerRequestActor(ctx: RequestContext, message: Message)
       context.become(timeoutBehaviour orElse waitingUpdateFetch)
       objId = id
       putObj = obj
-      db ! Fetch(id)
+      sendToDB(Fetch(id))
 
     case PutList(id, ids) =>
       context.become(timeoutBehaviour orElse waitingFetchFriend)
       objId = id
       idList = ids.split(",").toList
-      db ! Fetch(id)
+      sendToDB(Fetch(id))
 
     case d: Delete =>
       context.become(timeoutBehaviour orElse waitingDelete)
@@ -64,19 +60,6 @@ class PerRequestActor(ctx: RequestContext, message: Message)
     case msg =>
       throw new UnsupportedOperationException(s"Unsupported Operation $msg in per-request actor")
 
-  }
-
-  def sendToDB(msg: Message) = {
-    context.setReceiveTimeout(Duration(2, SECONDS))
-    db ! msg
-  }
-
-  override val supervisorStrategy =
-    OneForOneStrategy() {
-      case e => {
-        complete(StatusCodes.InternalServerError, e.getMessage)
-        Stop
-      }
   }
 
   def waitingFetch: Receive = {
@@ -161,11 +144,6 @@ class PerRequestActor(ctx: RequestContext, message: Message)
         case true => complete(StatusCodes.OK, HttpSuccessReply(succ))
         case false => complete(StatusCodes.NotFound, Error("delete error"))
       }
-  }
-
-  def complete[T <: AnyRef](status: StatusCode, obj: T) = {
-    ctx.complete(status, obj)
-    context.stop(self)
   }
 }
 
