@@ -5,6 +5,7 @@ import spray.testkit.Specs2RouteTest
 import spray.http.StatusCodes._
 import scala.concurrent.duration._
 import akka.actor.{ActorSystem, Props}
+import edu.ufl.dos15.db._
 
 class PageServiceSpec extends Specification with Specs2RouteTest with PageService with Before{
   import PageService._

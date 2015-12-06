@@ -5,6 +5,7 @@ import spray.routing.Route
 import spray.routing.directives.CachingDirectives._
 import spray.routing.HttpService
 import spray.http.StatusCodes
+import edu.ufl.dos15.fbapi.actor._
 
 object UserService {
   import PageService.Page
@@ -42,13 +43,13 @@ trait UserService extends HttpService with PerRequestFactory with Json4sProtocol
     } ~
     pathPrefix("user" / Segment) { id => // gets infomation about a user
       (path("feed") & post) {  // creates a post(feed)
-        entity(as[Feed]) { feed =>
-          ctx => handleRequest(ctx, EdgePost(id, feed.addFromAndCreatedTime(id), true))
+        entity(as[String]) { feed =>
+          ctx => handleRequest(ctx, EdgePost(id, feed, true))
         }
       } ~
       (path("friends") & post) {  // creates a friend list
-        entity(as[FriendList]) { friendList =>
-          ctx => handleRequest(ctx, EdgePost(id, friendList.addOwner(id), false))
+        entity(as[String]) { friendList =>
+          ctx => handleRequest(ctx, EdgePost(id, friendList, false))
         }
       } ~
       get {
@@ -57,7 +58,7 @@ trait UserService extends HttpService with PerRequestFactory with Json4sProtocol
         }
       } ~
       put { // update a user
-        entity(as[User]) { values =>
+        entity(as[String]) { values =>
           ctx => handleRequest(ctx, Put(id, values))
         }
       } ~

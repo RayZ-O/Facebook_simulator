@@ -1,16 +1,14 @@
-package edu.ufl.dos15.fbapi
+package edu.ufl.dos15.fbapi.actor
 
 import scala.concurrent.duration._
-import akka.actor.{Actor, ActorLogging, ActorSelection, Props, ReceiveTimeout}
-import akka.actor.OneForOneStrategy
-import akka.actor.SupervisorStrategy.Stop
+import akka.actor.{Actor, ActorLogging, Props}
 import spray.routing.HttpService
 import spray.routing.RequestContext
-import spray.http.StatusCode
 import spray.http.StatusCodes
 import org.json4s._
 import org.json4s.native.JsonMethods._
 import org.json4s.native.Serialization
+import edu.ufl.dos15.fbapi._
 
 class PerRequestActor(reqctx: RequestContext, message: Message) extends Actor
     with ActorLogging with Json4sProtocol with RequestHandler {
@@ -45,12 +43,6 @@ class PerRequestActor(reqctx: RequestContext, message: Message) extends Actor
       context.become(timeoutBehaviour orElse waitingUpdateFetch)
       objId = id
       putObj = obj
-      sendToDB(Fetch(id))
-
-    case PutList(id, ids) =>
-      context.become(timeoutBehaviour orElse waitingFetchFriend)
-      objId = id
-      idList = ids.split(",").toList
       sendToDB(Fetch(id))
 
     case d: Delete =>
@@ -101,29 +93,6 @@ class PerRequestActor(reqctx: RequestContext, message: Message) extends Actor
           val value = Extraction.decompose(putObj)
           val json = parse(content.get)
           val updated = compact(render(json merge value))
-          db ! Update(objId, updated)
-
-        case false => complete(StatusCodes.NotFound, Error("put-p1 error"))
-      }
-  }
-
-  def waitingFetchFriend: Receive = {
-    case DBReply(succ, content) =>
-      succ match {
-        case true =>
-          context.become(timeoutBehaviour orElse waitingUpdate)
-          import org.json4s.JsonDSL._
-          val json = parse(content.get)
-          val newValue = if (json \ "data" == JNothing) {
-            (idList, idList.length)
-          } else {
-            val data = (json \ "data").extract[List[String]]
-            val newIds = idList.filter { id => !data.contains(id) }
-            val newCount = newIds.length + data.length
-            (newIds, newCount)
-          }
-          val newField = ("data" -> newValue._1) ~ ("total_count" -> newValue._2)
-          val updated = compact(render(json merge newField))
           db ! Update(objId, updated)
 
         case false => complete(StatusCodes.NotFound, Error("put-p1 error"))

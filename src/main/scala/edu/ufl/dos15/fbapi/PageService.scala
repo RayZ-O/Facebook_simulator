@@ -5,6 +5,7 @@ import spray.routing.Route
 import spray.routing.directives.CachingDirectives._
 import spray.routing.HttpService
 import spray.http.StatusCodes
+import edu.ufl.dos15.fbapi.actor._
 
 object PageService {
   case class Page (
@@ -61,7 +62,7 @@ trait PageService extends HttpService with PerRequestFactory with Json4sProtocol
         }
       } ~
       put { // update a page
-        entity(as[Page]) { values =>
+        entity(as[String]) { values =>
           ctx => handleRequest(ctx, Put(id, values))
         }
       } ~

@@ -1,10 +1,11 @@
-package edu.ufl.dos15.fbapi
+package edu.ufl.dos15.fbapi.actor
 
 import akka.actor.{Actor, ActorLogging, Props}
 import spray.routing.RequestContext
 import com.roundeights.hasher.Implicits._
 import spray.http.StatusCodes
 import spray.routing.HttpService
+import edu.ufl.dos15.fbapi._
 
 class AuthActor(reqctx: RequestContext, message: Message) extends Actor
     with ActorLogging with Json4sProtocol with RequestHandler {

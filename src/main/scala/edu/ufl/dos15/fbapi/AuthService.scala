@@ -2,6 +2,7 @@ package edu.ufl.dos15.fbapi
 
 import spray.routing.HttpService
 import spray.routing.Route
+import edu.ufl.dos15.fbapi.actor.AuthActorCreator
 
 trait AuthService extends HttpService with AuthActorCreator with Json4sProtocol {
   val authRoute: Route = {

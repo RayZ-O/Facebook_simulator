@@ -1,10 +1,16 @@
-package edu.ufl.dos15.fbapi
+package edu.ufl.dos15.db
 
 import akka.actor.{Actor, ActorLogging}
 import scala.concurrent.duration._
-import java.security.SecureRandom
-import scala.util.Random
 import java.util.UUID
+import akka.actor.actorRef2Scala
+import edu.ufl.dos15.fbapi.PassWdAuth
+import edu.ufl.dos15.fbapi.Register
+import edu.ufl.dos15.fbapi.Tick
+import edu.ufl.dos15.fbapi.TokenAuth
+import scala.collection.mutable.HashMap
+import scala.collection.mutable.LinkedHashMap
+import edu.ufl.dos15.fbapi.DBReply
 
 case class Credentials(passwd: String, id: String, pubKey: String)
 case class TokenInfo(id: String, expireOn: Long)

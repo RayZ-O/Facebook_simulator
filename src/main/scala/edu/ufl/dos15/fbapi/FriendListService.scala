@@ -6,6 +6,8 @@ import spray.routing.directives.CachingDirectives._
 import spray.routing.HttpService
 import spray.http.StatusCodes
 
+import edu.ufl.dos15.fbapi.actor._
+
 object FriendListService {
   import UserService.User
 
@@ -46,20 +48,23 @@ trait FriendListService extends HttpService with PerRequestFactory with Json4sPr
     } ~
     pathPrefix("friends" / Segment) { id => // gets infomation about a friend list
       get {
-        parameter('fields.?) { fields =>
-          ctx => handleRequest(ctx, Get(id, fields))
-        }
+        ctx => handleRequest(ctx, Fetch(id))
       } ~
       put { // update a friends in a friend list
         parameter('ids) { ids =>
           ctx => handleRequest(ctx, PutList(id, ids))
         } ~
-        entity(as[FriendList]) { values =>
-          ctx => handleRequest(ctx, Put(id, values))
+        entity(as[String]) { values =>
+          ctx => handleRequest(ctx, Update(id, values))
         }
       } ~
       delete { // delete a friend list
-        ctx => handleRequest(ctx, Delete(id))
+        parameter('ids) { ids =>
+          ctx => handleRequest(ctx, DeleteList(id, ids))
+        } ~
+        {
+          ctx => handleRequest(ctx, Delete(id))
+        }
       }
     }
   }

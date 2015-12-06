@@ -7,6 +7,8 @@ import spray.routing.HttpService
 import spray.http.StatusCodes
 import java.util.Calendar
 
+import edu.ufl.dos15.fbapi.actor._
+
 object FeedService {
   import UserService._
   import PageService._
@@ -73,8 +75,8 @@ trait FeedService extends HttpService with PerRequestFactory with Json4sProtocol
         }
       } ~
       put { // update a post(feed)
-        entity(as[Feed]) { values =>
-          ctx => handleRequest(ctx, Put(id, values.addUpdatedTime()))
+        entity(as[String]) { values =>
+          ctx => handleRequest(ctx, Put(id, values))
         }
       } ~
       delete { // delete a post(feed)
