@@ -3,46 +3,87 @@ package edu.ufl.dos15.crypto
 import javax.crypto.KeyGenerator
 import javax.crypto.Cipher
 import javax.crypto.SecretKey
+import javax.crypto.spec.SecretKeySpec
+import javax.crypto.spec.IvParameterSpec
 import java.security.SecureRandom
+import java.security.KeyPair
+import java.security.PrivateKey
+import java.security.PublicKey
+import java.security.KeyPairGenerator
+import java.security.Signature
 
 object Crypto {
-    val random = new SecureRandom();
+  private val random = new SecureRandom();
 
-    object AES {
-
-        val numBits = 128
-
-        def generateKey() = {
-            val keyGen = KeyGenerator.getInstance("AES");
-            keyGen.init(numBits);
-            keyGen.generateKey()
-        }
-
-        def encodeKey(key: SecretKey) = key.getEncoded()
-
-        def decodeKey(key: Array[Byte]) = new SecretKeySpec(key, "AES")
-
-        def generateIv() = {
-            val iv = Array[Byte](numBits)
-            random.nextBytes(iv)
-            iv
-        }
-
-        def encrypt(data: Array[Byte], secKey: SecretKey, iv: IvParameterSpec) = {
-            val cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-            cipher.init(Cipher.ENCRYPT_MODE, secKey, iv)
-            cipher.doFinal(data)
-        }
-
-        def decrypt(data: Array[Byte], secKey: SecretKey, iv: IvParameterSpec) = {
-            val cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
-            cipher.init(Cipher.ENCRYPT_MODE, secKey, iv)
-            cipher.doFinal(data)
-        }
+  object AES {
+    def generateKey(keySize: Int): SecretKey = {
+        val keyGen = KeyGenerator.getInstance("AES")
+        keyGen.init(keySize)
+        keyGen.generateKey()
     }
 
-    object RSA {
-
+    def generateIv(keySize: Int): IvParameterSpec = {
+        val iv = new Array[Byte](keySize)
+        random.nextBytes(iv)
+        new IvParameterSpec(iv)
     }
 
+    def encrypt(str: String, secKey: SecretKey, iv: IvParameterSpec): Array[Byte] = {
+        encrypt(str.getBytes, secKey, iv)
+    }
+
+    def encrypt(data: Array[Byte], secKey: SecretKey, iv: IvParameterSpec): Array[Byte] = {
+        val cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+        cipher.init(Cipher.ENCRYPT_MODE, secKey, iv)
+        cipher.doFinal(data)
+    }
+
+    def decrypt(data: Array[Byte], secKey: SecretKey, iv: IvParameterSpec): Array[Byte] = {
+        val cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+        cipher.init(Cipher.ENCRYPT_MODE, secKey, iv)
+        cipher.doFinal(data)
+    }
+  }
+
+  object RSA {
+    def generateKeyPair(keySize: Int): KeyPair = {
+      val keyGen = KeyPairGenerator.getInstance("RSA");
+      keyGen.initialize(keySize);
+      keyGen.generateKeyPair()
+    }
+
+    def encrypt(data: String, pubKey: PublicKey): Array[Byte] = {
+      encrypt(data.getBytes, pubKey)
+    }
+
+    def encrypt(data: Array[Byte], pubKey: PublicKey): Array[Byte] = {
+      val cipher = Cipher.getInstance("RSA")
+      cipher.init(Cipher.ENCRYPT_MODE, pubKey)
+      cipher.doFinal(data)
+    }
+
+    def decrypt(data: Array[Byte], priKey: PrivateKey): Array[Byte] = {
+      val cipher = Cipher.getInstance("RSA")
+      cipher.init(Cipher.DECRYPT_MODE, priKey)
+      cipher.doFinal(data)
+    }
+
+    def sign(data: String, priKey: PrivateKey): Array[Byte] = {
+      sign(data.getBytes, priKey)
+    }
+
+    def sign(data: Array[Byte], priKey: PrivateKey): Array[Byte] = {
+      val signer = Signature.getInstance("SHA256withRSA")
+      signer.initSign(priKey)
+      signer.update(data)
+      signer.sign
+    }
+
+    def verify(data: Array[Byte], signature: Array[Byte], pubKey: PublicKey): Boolean = {
+      val verifier = Signature.getInstance("SHA256withRSA")
+      verifier.initVerify(pubKey)
+      verifier.update(data)
+      verifier.verify(signature)
+    }
+  }
 }
