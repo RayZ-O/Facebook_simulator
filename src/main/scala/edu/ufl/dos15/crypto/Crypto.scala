@@ -15,6 +15,17 @@ import java.security.Signature
 object Crypto {
   private val random = new SecureRandom();
 
+  def generateNonce(size: Int) = {
+    val nonce = new Array[Byte](size)
+    random.nextBytes(nonce).toString()
+  }
+
+  def generateToken(size: Int) = {
+    val bytes = new Array[Byte](size)
+    random.nextBytes(bytes)
+    bytes.map("%02x".format(_)).mkString
+  }
+
   object AES {
     def generateKey(keySize: Int): SecretKey = {
         val keyGen = KeyGenerator.getInstance("AES")

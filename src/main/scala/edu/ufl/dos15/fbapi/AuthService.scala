@@ -11,6 +11,11 @@ trait AuthService extends HttpService with AuthActorCreator with Json4sProtocol 
         ctx => handleAuth(ctx, reg)
       }
     } ~
+    (path("login") & get) {
+      parameter('id) { id =>
+        ctx => handleAuth(ctx, GetNonce(id))
+      }
+    }
     (path("login") & post) {
       entity(as[PassWdAuth]) { cred =>
         ctx => handleAuth(ctx, cred)

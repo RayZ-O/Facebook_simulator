@@ -35,5 +35,6 @@ case class DeleteMul(id: String, ids: List[String]) extends Message
 case object Tick extends Message
 // auth message
 case class Register(username: String, passwd: String, pubKey: String) extends Message
+case class GetNonce(id: String) extends Message
 case class PassWdAuth(username: String, passwd: String) extends Message
 case class TokenAuth(token: String) extends Message
