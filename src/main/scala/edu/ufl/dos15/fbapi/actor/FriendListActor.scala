@@ -2,7 +2,8 @@ package edu.ufl.dos15.fbapi.actor
 
 import akka.actor.{Actor, ActorLogging, Props}
 import spray.routing.RequestContext
-import edu.ufl.dos15.fbapi._
+import edu.ufl.dos15.fbapi.Json4sProtocol
+import edu.ufl.dos15.fbapi.FBMessage._
 
 class FriendListActor(reqctx: RequestContext, message: Message) extends Actor
     with ActorLogging with Json4sProtocol with RequestHandler {

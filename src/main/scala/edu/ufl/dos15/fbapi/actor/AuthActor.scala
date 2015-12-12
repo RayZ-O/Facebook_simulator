@@ -5,7 +5,8 @@ import spray.routing.RequestContext
 import com.roundeights.hasher.Implicits._
 import spray.http.StatusCodes
 import spray.routing.HttpService
-import edu.ufl.dos15.fbapi._
+import edu.ufl.dos15.fbapi.Json4sProtocol
+import edu.ufl.dos15.fbapi.FBMessage._
 import edu.ufl.dos15.crypto._
 
 class AuthActor(reqctx: RequestContext, message: Message) extends Actor

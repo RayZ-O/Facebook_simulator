@@ -4,7 +4,7 @@ import akka.actor.{Actor, ActorLogging}
 import scala.concurrent.duration._
 import java.util.UUID
 import akka.actor.actorRef2Scala
-import edu.ufl.dos15.fbapi._
+import edu.ufl.dos15.fbapi.FBMessage._
 import edu.ufl.dos15.crypto._
 
 case class Credentials(passwd: String, pubKey: String)

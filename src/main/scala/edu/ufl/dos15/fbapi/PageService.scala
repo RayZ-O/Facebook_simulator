@@ -33,6 +33,7 @@ trait PageService extends HttpService with PerRequestFactory with Json4sProtocol
   import PageService._
   import FeedService._
   import FriendListService._
+  import FBMessage._
 
   val pageCache = routeCache(maxCapacity = 1000, timeToIdle = Duration("30 min"))
 

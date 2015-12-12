@@ -1,13 +1,12 @@
 package edu.ufl.dos15.fbapi.actor
 
-import akka.actor.{Actor, ActorSelection}
-import akka.actor.ReceiveTimeout
-import akka.actor.OneForOneStrategy
+import akka.actor.{Actor, ActorSelection, ReceiveTimeout, OneForOneStrategy}
 import akka.actor.SupervisorStrategy.Stop
 import spray.routing.RequestContext
 import spray.http.{StatusCode, StatusCodes}
 import scala.concurrent.duration._
-import edu.ufl.dos15.fbapi._
+import edu.ufl.dos15.fbapi.Json4sProtocol
+import edu.ufl.dos15.fbapi.FBMessage._
 
 trait RequestHandler {
   this: Actor with Json4sProtocol =>

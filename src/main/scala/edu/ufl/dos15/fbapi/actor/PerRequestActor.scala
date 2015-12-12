@@ -8,7 +8,8 @@ import spray.http.StatusCodes
 import org.json4s._
 import org.json4s.native.JsonMethods._
 import org.json4s.native.Serialization
-import edu.ufl.dos15.fbapi._
+import edu.ufl.dos15.fbapi.Json4sProtocol
+import edu.ufl.dos15.fbapi.FBMessage._
 
 class PerRequestActor(reqctx: RequestContext, message: Message) extends Actor
     with ActorLogging with Json4sProtocol with RequestHandler {

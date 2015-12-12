@@ -5,6 +5,8 @@ import spray.routing.Route
 import edu.ufl.dos15.fbapi.actor.AuthActorCreator
 
 trait AuthService extends HttpService with AuthActorCreator with Json4sProtocol {
+  import FBMessage._
+
   val authRoute: Route = {
     (path("register") & post) {
       entity(as[Register]) { reg =>

@@ -23,9 +23,9 @@ class Client(id: String, host: String, port: Int, page: Boolean) extends Actor
   import edu.ufl.dos15.fbapi.FeedService.FeedType._
   import edu.ufl.dos15.fbapi.FriendListService._
   import edu.ufl.dos15.fbapi.FriendListService.FriendListType._
-  import edu.ufl.dos15.fbapi.HttpIdReply
-  import edu.ufl.dos15.fbapi.HttpListReply
-  import edu.ufl.dos15.fbapi.HttpSuccessReply
+  import edu.ufl.dos15.fbapi.FBMessage.HttpIdReply
+  import edu.ufl.dos15.fbapi.FBMessage.HttpSuccessReply
+  import edu.ufl.dos15.fbapi.FBMessage.HttpListReply
 
   val userUri = s"http://$host:$port/user"
   val pageUri = s"http://$host:$port/page"

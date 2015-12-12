@@ -1,7 +1,7 @@
 package edu.ufl.dos15.db
 
 import akka.actor.{Actor, ActorLogging}
-import edu.ufl.dos15.fbapi._
+import edu.ufl.dos15.fbapi.FBMessage._
 
 class FriendDB extends Actor with ActorLogging {
 

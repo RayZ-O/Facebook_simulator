@@ -39,6 +39,7 @@ object FriendListService {
 
 trait FriendListService extends HttpService with PerRequestFactory with Json4sProtocol {
   import FriendListService._
+  import FBMessage._
 
   val friendListCache = routeCache(maxCapacity = 1000, timeToIdle = Duration("30 min"))
 

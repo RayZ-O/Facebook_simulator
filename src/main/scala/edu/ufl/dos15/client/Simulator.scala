@@ -16,7 +16,7 @@ class Simulator(host: String, port: Int, num: Int) extends Actor with ActorLoggi
   import context.dispatcher
 
   import edu.ufl.dos15.fbapi.UserService.User
-  import edu.ufl.dos15.fbapi.HttpIdReply
+  import edu.ufl.dos15.fbapi.FBMessage.HttpIdReply
   val pipeline = sendReceive ~> unmarshal[HttpIdReply]
   val userUri = s"http://$host:$port/user"
 

@@ -29,6 +29,7 @@ trait UserService extends HttpService with PerRequestFactory with Json4sProtocol
   import UserService._
   import FeedService._
   import FriendListService._
+  import FBMessage._
 
   val userCache = routeCache(maxCapacity = 1000, timeToIdle = Duration("30 min"))
 
