@@ -1,5 +1,9 @@
 package edu.ufl.dos15.client
 
+import java.util.Base64
+import java.security.PublicKey
+import javax.crypto.SecretKey
+import javax.crypto.spec.IvParameterSpec
 import akka.actor.{Actor, ActorLogging, Cancellable}
 import spray.http.StatusCodes
 import spray.http.HttpResponse
@@ -8,10 +12,16 @@ import scala.util.{Success, Failure}
 import scala.util.Random
 import scala.concurrent.Future
 import scala.concurrent.duration._
+import org.json4s._
+import org.json4s.native.JsonMethods._
+import org.json4s.native.Serialization
+import com.roundeights.hasher.Implicits._
+import edu.ufl.dos15.fbapi.Json4sProtocol
+import edu.ufl.dos15.crypto.Crypto._
+import sun.security.krb5.EncryptedData
+import spray.http.HttpRequest
 
 case object Tick
-
-import edu.ufl.dos15.fbapi.Json4sProtocol
 class Client(id: String, host: String, port: Int, page: Boolean) extends Actor
     with ActorLogging with Json4sProtocol {
   import context.dispatcher
@@ -26,6 +36,8 @@ class Client(id: String, host: String, port: Int, page: Boolean) extends Actor
   import edu.ufl.dos15.fbapi.FBMessage.HttpIdReply
   import edu.ufl.dos15.fbapi.FBMessage.HttpSuccessReply
   import edu.ufl.dos15.fbapi.FBMessage.HttpListReply
+  import edu.ufl.dos15.fbapi.FBMessage.HttpDataReply
+  import edu.ufl.dos15.fbapi.FBMessage.EncryptedData
 
   val userUri = s"http://$host:$port/user"
   val pageUri = s"http://$host:$port/page"
@@ -33,6 +45,12 @@ class Client(id: String, host: String, port: Int, page: Boolean) extends Actor
   val friendUri = s"http://$host:$port/friends"
   val edgeBaseUri = if (page == true) s"http://$host:$port/page/$id"
                 else s"http://$host:$port/user/$id"
+
+  private val kp = RSA.generateKeyPair()
+  val pubKey = kp.getPublic()
+  private val priKey = kp.getPrivate()
+  import scala.collection.mutable.HashMap
+  var friendsPubKeys = new HashMap[String, PublicKey]
 
   import scala.collection.mutable.ArrayBuffer
   var myPost = new ArrayBuffer[String]
@@ -77,6 +95,69 @@ class Client(id: String, host: String, port: Int, page: Boolean) extends Actor
     }
   }
 
+  def encyptData(data: String, symKey: SecretKey, iv: IvParameterSpec) = {
+    val digest = data.sha256
+    val signature = RSA.sign(digest.bytes, priKey)
+    val dataWithSign = data + "|" +  new String(Base64.getEncoder().encodeToString(signature))
+    val encyptData = AES.encrypt(dataWithSign, symKey, iv)
+    val keys = encryptSymKey(symKey.getEncoded())
+    EncryptedData(encyptData, iv.getIV(), keys)
+  }
+
+  def decyptData(encryptedData: Array[Byte], encryptedKey: Array[Byte], iv: Array[Byte]) = {
+    val secKey = AES.decodeKey(RSA.decrypt(encryptedKey, priKey))
+    val dataWithSign = new String(AES.decrypt(encryptedData, secKey, new IvParameterSpec(iv)))
+    dataWithSign.split("\\|") match {
+      case Array(data, sign) =>
+        val signature = Base64.getDecoder().decode(sign)
+        RSA.verify(data.sha256.bytes, signature, pubKey) match {
+          case true => (true, data)
+          case false => (false, "Unmatching digital signature")
+        }
+      case _ => (false, "Unrecognized encrypted data")
+    }
+  }
+
+  def encryptSymKey(symKey: Array[Byte]): HashMap[String, Array[Byte]] ={
+    friendsPubKeys.map{ p => (p._1 -> RSA.encrypt(symKey, p._2)) }
+  }
+
+  def filterFields(nodeId: String, params: Option[String], content: String): JsonAST.JValue = {
+    import org.json4s.JsonDSL._
+    val json = (JObject() ~ ("id" -> nodeId)) merge parse(content)
+    params match {
+      case Some(fields) =>
+        val query = fields.split(",")
+        query.foldLeft(JObject()) { (res, name) =>
+          (res ~ (name -> json \ name)) }
+      case None => json
+    }
+  }
+
+  def getData(req: HttpRequest, errMsg: String) = {
+    val pipeline = sendReceive ~> unmarshal[HttpDataReply]
+    val responseFuture = pipeline(req)
+    val nodeId = req.uri.query.get("id")
+    val params = req.uri.query.get("fields")
+    responseFuture onComplete {
+      case Success(ed) =>
+        try {
+          val res = decyptData(ed.data, ed.iv, ed.key)
+          res._1 match {
+            case true =>
+              val json = filterFields(nodeId.get, params, res._2)
+              val jsonStr = compact(render(json))
+              println(jsonStr)
+            case false => log.error(res._2)
+          }
+        } catch {
+          case error: Throwable => log.error(error, "Decrypt failed")
+        }
+      case Failure(error) =>
+        log.error(error, errMsg)
+    }
+  }
+
   def readFriendProfile() = {
     val f = getFriends(myFriendListId)
     f onComplete {
@@ -91,7 +172,7 @@ class Client(id: String, host: String, port: Int, page: Boolean) extends Actor
     val f = getNewFeeds()
     f onComplete {
       case Success(feeds) =>
-        feeds.data foreach { feedId => getFeed(feedId) }
+        feeds.list foreach { feedId => getFeed(feedId) }
       case Failure(error) =>
         log.error(error, "Couldn't read new feeds")
     }

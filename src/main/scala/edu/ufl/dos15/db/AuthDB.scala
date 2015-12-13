@@ -35,7 +35,7 @@ class AuthDB extends Actor with ActorLogging {
       }
 
     case GetNonce(id) =>
-      val nounce = Crypto.generateNonce(96)
+      val nounce = Crypto.generateNonce
       val expire = System.currentTimeMillis + 300000L
       nonceDB += (nounce -> NonceInfo(id, expire))
       sender ! DBReply(true, Some(nounce))
@@ -45,7 +45,7 @@ class AuthDB extends Actor with ActorLogging {
       credDB.get(id) match {
         case Some(cred) =>
           if (cred.passwd == passwd) {
-            val token = Crypto.generateToken(96)
+            val token = Crypto.generateToken
             val expire = System.currentTimeMillis + 3600000L
             tokenDB += (token -> TokenInfo(id, expire))
             sender ! DBReply(true, Some(token))

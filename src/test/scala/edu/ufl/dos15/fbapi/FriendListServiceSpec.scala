@@ -9,6 +9,7 @@ import edu.ufl.dos15.db._
 
 class FriendListServiceSpec extends Specification with Specs2RouteTest with FriendListService with Before {
   import FriendListService._
+  import FBMessage._
 
   implicit val routeTestTimeout = RouteTestTimeout(FiniteDuration(5, SECONDS))
 

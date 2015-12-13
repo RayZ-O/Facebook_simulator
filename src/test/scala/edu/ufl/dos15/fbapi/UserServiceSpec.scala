@@ -10,6 +10,7 @@ import edu.ufl.dos15.db._
 class UserServiceSpec extends Specification with Specs2RouteTest with UserService with Before {
   import UserService._
   import FeedService._
+  import FBMessage._
 
   implicit val routeTestTimeout = RouteTestTimeout(FiniteDuration(5, SECONDS))
 

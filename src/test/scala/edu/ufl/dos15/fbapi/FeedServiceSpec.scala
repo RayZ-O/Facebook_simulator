@@ -9,6 +9,7 @@ import edu.ufl.dos15.db._
 
 class FeedServiceSpec extends Specification with Specs2RouteTest with FeedService with Before {
   import FeedService._
+  import FBMessage._
 
   implicit val routeTestTimeout = RouteTestTimeout(FiniteDuration(5, SECONDS))
 
