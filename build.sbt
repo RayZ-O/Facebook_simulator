@@ -24,6 +24,7 @@ libraryDependencies ++= Seq(
     "com.typesafe.akka" %% "akka-remote" % vakka,
     "com.typesafe.akka" %% "akka-testkit" % vakka,
     "com.typesafe" % "config" % "1.3.0",
+    "org.scalatest" %% "scalatest" % "2.2.4" % "test",
     "com.roundeights" %% "hasher" % "1.2.0",
     "io.spray" %% "spray-can" % vspray,
     "io.spray" %% "spray-caching" % vspray,

@@ -18,8 +18,6 @@ import java.security.Signature
 import com.typesafe.config.ConfigFactory
 import scala.util.Try
 
-
-
 object Crypto {
   private val random = new SecureRandom();
   val config = ConfigFactory.load()

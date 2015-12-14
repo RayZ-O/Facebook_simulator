@@ -32,7 +32,7 @@ class AuthDB extends Actor with ActorLogging {
         val id = generateId()
         nameDB += (name -> id)
         credDB += (id -> Credentials(passwd, pub))
-        sender ! DBReply(true)
+        sender ! DBReply(true, Some(id))
       }
 
     case GetNonce(id) =>
@@ -43,7 +43,8 @@ class AuthDB extends Actor with ActorLogging {
       
     case CheckNonce(n, sign) =>
       nonceDB.get(n) match {
-        case Some(ni) =>          
+        case Some(ni) =>
+          nonceDB -= n
           credDB.get(ni.id) match {
             case Some(cred) =>
               val pubKey = cred.pubKey
@@ -58,8 +59,7 @@ class AuthDB extends Actor with ActorLogging {
           
         case None => 
           sender ! DBReply(false)
-      }
-      nonceDB -= n
+      }      
 
     case PassWdAuth(name, passwd) =>
       val id = nameDB.getOrElse(name, "")
