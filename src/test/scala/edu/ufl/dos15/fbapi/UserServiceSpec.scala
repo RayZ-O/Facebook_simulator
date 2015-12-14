@@ -17,7 +17,7 @@ class UserServiceSpec extends Specification with Specs2RouteTest with UserServic
   def actorRefFactory = system
 
   def before() = {
-    val db = system.actorOf(Props[MockDB], "db")
+    val db = system.actorOf(Props[EncryptedDataDB], "db")
     db ! DBTestInsert("1", """{"email": "ruizhang1011@ufl.edu",
                                "gender": "male",
                                "first_name": "Rui",

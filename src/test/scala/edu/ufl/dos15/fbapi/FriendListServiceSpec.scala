@@ -16,7 +16,7 @@ class FriendListServiceSpec extends Specification with Specs2RouteTest with Frie
   def actorRefFactory = system
 
   def before() = {
-    val db = system.actorOf(Props[MockDB], "db")
+    val db = system.actorOf(Props[EncryptedDataDB], "db")
     db ! DBTestInsert("41", """{"name": "myfriends"}""")
   }
 

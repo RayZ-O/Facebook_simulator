@@ -24,14 +24,18 @@ class AuthActor(reqctx: RequestContext, message: Message) extends Actor
         case _ =>
           complete(StatusCodes.BadRequest, Error("illegal username"))
       }
-
-    case pwa: PassWdAuth =>
-      context.become(timeoutBehaviour orElse waitingPassAuth)
-      sendToDB(pwa)
-
+          
     case gn: GetNonce =>
       context.become(timeoutBehaviour orElse waitingNonce)
       sendToDB(gn)
+
+    case pwa: PassWdAuth =>
+      context.become(timeoutBehaviour orElse waitingToken)
+      sendToDB(pwa)
+      
+    case cn: CheckNonce =>
+      context.become(timeoutBehaviour orElse waitingToken)
+      sendToDB(cn)
 
     case msg =>
       throw new UnsupportedOperationException(s"Unsupported Operation $msg in auth actor")
@@ -53,7 +57,7 @@ class AuthActor(reqctx: RequestContext, message: Message) extends Actor
       }
   }
 
-  def waitingPassAuth: Receive = {
+  def waitingToken: Receive = {
     case DBReply(succ, token) =>
       succ match {
         case true => complete(StatusCodes.OK, HttpTokenReply(token.get))

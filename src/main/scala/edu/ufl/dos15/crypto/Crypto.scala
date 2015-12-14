@@ -6,14 +6,19 @@ import javax.crypto.Cipher
 import javax.crypto.SecretKey
 import javax.crypto.spec.SecretKeySpec
 import javax.crypto.spec.IvParameterSpec
+import java.security.KeyFactory
 import java.security.SecureRandom
 import java.security.KeyPair
 import java.security.PrivateKey
 import java.security.PublicKey
+import java.security.spec.PKCS8EncodedKeySpec
+import java.security.spec.X509EncodedKeySpec
 import java.security.KeyPairGenerator
 import java.security.Signature
 import com.typesafe.config.ConfigFactory
 import scala.util.Try
+
+
 
 object Crypto {
   private val random = new SecureRandom();
@@ -47,7 +52,7 @@ object Crypto {
     }
 
     def decodeKey(bytes: Array[Byte]): SecretKey = {
-      new SecretKeySpec(Base64.getDecoder().decode(bytes), "AES");
+      new SecretKeySpec(Base64.getDecoder().decode(bytes), "AES")
     }
 
     def encrypt(str: String, secKey: SecretKey, iv: IvParameterSpec): Array[Byte] = {
@@ -55,7 +60,7 @@ object Crypto {
     }
 
     def encrypt(data: Array[Byte], secKey: SecretKey, iv: IvParameterSpec): Array[Byte] = {
-      val cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+      val cipher = Cipher.getInstance("AES/CBC/PKCS5Padding")
       cipher.init(Cipher.ENCRYPT_MODE, secKey, iv)
       cipher.doFinal(data)
     }
@@ -65,7 +70,7 @@ object Crypto {
     }
 
     def decrypt(data: Array[Byte], secKey: SecretKey, iv: IvParameterSpec): Array[Byte] = {
-      val cipher = Cipher.getInstance("AES/CBC/PKCS5Padding");
+      val cipher = Cipher.getInstance("AES/CBC/PKCS5Padding")
       cipher.init(Cipher.DECRYPT_MODE, secKey, iv)
       cipher.doFinal(data)
     }
@@ -73,9 +78,21 @@ object Crypto {
 
   object RSA {
     def generateKeyPair(): KeyPair = {
-      val keyGen = KeyPairGenerator.getInstance("RSA");
+      val keyGen = KeyPairGenerator.getInstance("RSA")
       keyGen.initialize(1024);
       keyGen.generateKeyPair()
+    }
+    
+    def decodePubKey(bytes: Array[Byte]): PublicKey = {
+      val spec = new X509EncodedKeySpec(bytes)
+      val factory = KeyFactory.getInstance("RSA")
+      factory.generatePublic(spec)
+    }
+    
+    def decodePriKey(bytes: Array[Byte]): PrivateKey = {
+      val spec = new PKCS8EncodedKeySpec(bytes)
+      val factory = KeyFactory.getInstance("RSA")
+      factory.generatePrivate(spec)
     }
 
     def encrypt(data: String, pubKey: PublicKey): Array[Byte] = {
@@ -103,6 +120,14 @@ object Crypto {
       signer.initSign(priKey)
       signer.update(data)
       signer.sign
+    }
+    
+    def verify(data: String, signature: Array[Byte], pubKey: Array[Byte]): Boolean = {      
+      verify(data.getBytes("UTF-8"), signature, decodePubKey(pubKey))
+    }
+    
+    def verify(data: Array[Byte], signature: Array[Byte], pubKey: Array[Byte]): Boolean = {      
+      verify(data, signature, decodePubKey(pubKey))
     }
 
     def verify(data: Array[Byte], signature: Array[Byte], pubKey: PublicKey): Boolean = {

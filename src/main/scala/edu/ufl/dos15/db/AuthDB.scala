@@ -7,11 +7,12 @@ import akka.actor.actorRef2Scala
 import edu.ufl.dos15.fbapi.FBMessage._
 import edu.ufl.dos15.crypto._
 
-case class Credentials(passwd: String, pubKey: String)
+case class Credentials(passwd: String, pubKey: Array[Byte])
 case class NonceInfo(id: String, expireOn: Long)
 case class TokenInfo(id: String, expireOn: Long)
 
 class AuthDB extends Actor with ActorLogging {
+  val dbNo = "001"
   import scala.collection.mutable.HashMap
   private var nameDB = new HashMap[String, String]
   private var credDB = new HashMap[String, Credentials]
@@ -35,19 +36,37 @@ class AuthDB extends Actor with ActorLogging {
       }
 
     case GetNonce(id) =>
-      val nounce = Crypto.generateNonce
+      val nonce = Crypto.generateNonce
       val expire = System.currentTimeMillis + 300000L
-      nonceDB += (nounce -> NonceInfo(id, expire))
-      sender ! DBReply(true, Some(nounce))
+      nonceDB += (nonce -> NonceInfo(id, expire))
+      sender ! DBReply(true, Some(nonce))
+      
+    case CheckNonce(n, sign) =>
+      nonceDB.get(n) match {
+        case Some(ni) =>          
+          credDB.get(ni.id) match {
+            case Some(cred) =>
+              val pubKey = cred.pubKey
+              if (Crypto.RSA.verify(n, sign, pubKey)) {
+                val token = produceToken(ni.id)
+                sender ! DBReply(true, Some(token))
+              } else {
+                sender ! DBReply(false)
+              }         
+            case None => sender ! DBReply(false)
+          }
+          
+        case None => 
+          sender ! DBReply(false)
+      }
+      nonceDB -= n
 
     case PassWdAuth(name, passwd) =>
       val id = nameDB.getOrElse(name, "")
       credDB.get(id) match {
         case Some(cred) =>
           if (cred.passwd == passwd) {
-            val token = Crypto.generateToken
-            val expire = System.currentTimeMillis + 3600000L
-            tokenDB += (token -> TokenInfo(id, expire))
+            val token = produceToken(id)           
             sender ! DBReply(true, Some(token))
           } else {
             sender ! DBReply(false)
@@ -66,8 +85,15 @@ class AuthDB extends Actor with ActorLogging {
       tokenDB.dropWhile(t => t._2.expireOn < System.currentTimeMillis())
   }
 
+  def produceToken(id: String) = {
+    val token = Crypto.generateToken()
+    val expire = System.currentTimeMillis + 3600000L
+    tokenDB += (token -> TokenInfo(id, expire))
+    token
+  }
+  
   def generateId() = {
     sequenceNum += 1
-    System.currentTimeMillis().toString + sequenceNum
+    dbNo + System.currentTimeMillis().toString + sequenceNum
   }
 }

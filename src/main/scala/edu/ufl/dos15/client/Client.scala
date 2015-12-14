@@ -17,7 +17,6 @@ import com.roundeights.hasher.Implicits._
 import edu.ufl.dos15.fbapi.Json4sProtocol
 import edu.ufl.dos15.crypto.Crypto._
 
-case object Tick
 class Client(id: String, host: String, port: Int, page: Boolean) extends Actor
     with ActorLogging with Json4sProtocol {
   import context.dispatcher
@@ -34,6 +33,7 @@ class Client(id: String, host: String, port: Int, page: Boolean) extends Actor
   import edu.ufl.dos15.fbapi.FBMessage.HttpListReply
   import edu.ufl.dos15.fbapi.FBMessage.HttpDataReply
   import edu.ufl.dos15.fbapi.FBMessage.EncryptedData
+  import edu.ufl.dos15.fbapi.FBMessage.Tick
 
   val userUri = s"http://$host:$port/user"
   val pageUri = s"http://$host:$port/page"
@@ -96,7 +96,8 @@ class Client(id: String, host: String, port: Int, page: Boolean) extends Actor
     val signature = RSA.sign(digest.bytes, priKey)
     val dataWithSign = data + "|" +  new String(Base64.getEncoder().encodeToString(signature))
     val encyptData = AES.encrypt(dataWithSign, symKey, iv)
-    val keys = encryptSymKey(symKey.getEncoded())
+    val keyBytes = symKey.getEncoded()
+    val keys = friendsPubKeys.map{ p => (p._1 -> RSA.encrypt(keyBytes, p._2)) }
     EncryptedData(encyptData, iv.getIV(), keys)
   }
 
@@ -112,10 +113,6 @@ class Client(id: String, host: String, port: Int, page: Boolean) extends Actor
         }
       case _ => (false, "Unrecognized encrypted data")
     }
-  }
-
-  def encryptSymKey(symKey: Array[Byte]): HashMap[String, Array[Byte]] ={
-    friendsPubKeys.map{ p => (p._1 -> RSA.encrypt(symKey, p._2)) }
   }
 
   def filterFields(nodeId: String, params: Option[String], content: String): JsonAST.JValue = {

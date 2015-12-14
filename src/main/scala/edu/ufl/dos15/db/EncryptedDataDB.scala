@@ -3,12 +3,13 @@ package edu.ufl.dos15.db
 import akka.actor.{Actor, ActorLogging}
 import edu.ufl.dos15.fbapi.FBMessage._
 
-class MockDB extends Actor with ActorLogging {
+class EncryptedDataDB extends Actor with ActorLogging {
+    val dbNo = "002"
     import scala.collection.mutable.HashMap
     private var db = new HashMap[String, String]
     import scala.collection.mutable.ListBuffer
     private var posts = new ListBuffer[String]
-    private var count = 0;
+    private var sequenceNum = 0;
 
     def receive: Receive = {
       case Fetch(id) =>
@@ -58,16 +59,16 @@ class MockDB extends Actor with ActorLogging {
         }
 
       case DBTestInsert(id, value) =>
-//        log.info(s"test insert $id -> $value, count = $count")
+//        log.info(s"test insert $id -> $value, sequenceNum = $sequenceNum")
         if (!db.contains(id)) {
-          count += 1
+          sequenceNum += 1
           db += (id -> value)
         }
     }
 
     def insert(value: String) = {
-      count += 1
-      val id = System.currentTimeMillis().toString + count
+      sequenceNum += 1
+      val id = dbNo + System.currentTimeMillis().toString + sequenceNum
       db += (id -> value)
       id
     }

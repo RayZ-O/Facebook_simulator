@@ -16,7 +16,7 @@ class FeedServiceSpec extends Specification with Specs2RouteTest with FeedServic
   def actorRefFactory = system
 
   def before() = {
-    val db = system.actorOf(Props[MockDB], "db")
+    val db = system.actorOf(Props[EncryptedDataDB], "db")
     db ! DBTestInsert("31", """{"message": "I am happy today"}""")
   }
 

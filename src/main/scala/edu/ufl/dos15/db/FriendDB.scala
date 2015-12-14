@@ -5,14 +5,16 @@ import edu.ufl.dos15.fbapi.FBMessage._
 
 class FriendDB extends Actor with ActorLogging {
 
-  class FriendStore(listInfo: String) {
+  class FriendList(listInfo: String) {
     var info = listInfo
     import scala.collection.mutable.HashSet
     var data = new HashSet[String]
   }
 
   import scala.collection.mutable.HashMap
-  private var friendDB = new HashMap[String, FriendStore]
+  private var friendDB = new HashMap[String, FriendList]
+  import scala.collection.mutable.ListBuffer
+  private var owenrToList = new HashMap[String, ListBuffer[String]]
   private var count = 0
 
   def receive = {
@@ -56,7 +58,7 @@ class FriendDB extends Actor with ActorLogging {
   def insert(value: String) = {
       count += 1
       val id = System.currentTimeMillis().toString + count
-      friendDB += (id -> new FriendStore(value))
+      friendDB += (id -> new FriendList(value))
       id
   }
 }
