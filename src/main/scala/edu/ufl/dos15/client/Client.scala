@@ -5,11 +5,9 @@ import java.security.PublicKey
 import javax.crypto.SecretKey
 import javax.crypto.spec.IvParameterSpec
 import akka.actor.{Actor, ActorLogging, Cancellable}
-import spray.http.StatusCodes
-import spray.http.HttpResponse
+import spray.http.{StatusCodes, HttpRequest, HttpResponse}
 import spray.client.pipelining._
-import scala.util.{Success, Failure}
-import scala.util.Random
+import scala.util.{Success, Failure, Random}
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import org.json4s._
@@ -18,8 +16,6 @@ import org.json4s.native.Serialization
 import com.roundeights.hasher.Implicits._
 import edu.ufl.dos15.fbapi.Json4sProtocol
 import edu.ufl.dos15.crypto.Crypto._
-import sun.security.krb5.EncryptedData
-import spray.http.HttpRequest
 
 case object Tick
 class Client(id: String, host: String, port: Int, page: Boolean) extends Actor
