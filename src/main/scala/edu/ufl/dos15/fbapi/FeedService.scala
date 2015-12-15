@@ -1,9 +1,8 @@
 package edu.ufl.dos15.fbapi
 
 import scala.concurrent.duration.Duration
-import spray.routing.Route
+import spray.routing.{RequestContext, HttpService, Route}
 import spray.routing.directives.CachingDirectives._
-import spray.routing.HttpService
 import spray.http.StatusCodes
 import java.util.Calendar
 
@@ -56,7 +55,7 @@ object FeedService {
   }
 }
 
-trait FeedService extends HttpService with PerRequestFactory with Json4sProtocol {
+trait FeedService extends HttpService with RequestActorFactory with Json4sProtocol {
   import FeedService._
   import FBMessage._
 
@@ -67,21 +66,21 @@ trait FeedService extends HttpService with PerRequestFactory with Json4sProtocol
       complete(StatusCodes.OK)
     } ~
     (path("feed" / "new") & get) {
-      ctx => handleRequest(ctx, GetNewPosts())
+      ctx => handle[DataStoreActor](ctx, GetNewPosts())
     } ~
     pathPrefix("feed" / Segment) { id => // gets infomation about a post(feed)
       get {
         parameter('fields.?) { fields =>
-          ctx => handleRequest(ctx, Get(id, fields))
+          ctx => handle[DataStoreActor](ctx, Get(id, fields))
         }
       } ~
       put { // update a post(feed)
         entity(as[String]) { values =>
-          ctx => handleRequest(ctx, Put(id, values))
+          ctx => handle[DataStoreActor](ctx, Put(id, values))
         }
       } ~
       delete { // delete a post(feed)
-        ctx => handleRequest(ctx, Delete(id))
+        ctx => handle[DataStoreActor](ctx, Delete(id))
       }
     }
   }

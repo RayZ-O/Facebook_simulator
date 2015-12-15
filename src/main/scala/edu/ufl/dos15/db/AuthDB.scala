@@ -27,19 +27,19 @@ class AuthDB extends Actor with ActorLogging {
   def receive = {
     case Register(name, passwd, pub) =>
       if (nameDB.contains(name)) {
-        sender ! DBReply(false)
+        sender ! DBStrReply(false)
       } else {
         val id = generateId()
         nameDB += (name -> id)
         credDB += (id -> Credentials(passwd, pub))
-        sender ! DBReply(true, Some(id))
+        sender ! DBStrReply(true, Some(id))
       }
 
     case GetNonce(id) =>
       val nonce = Crypto.generateNonce
       val expire = System.currentTimeMillis + 300000L
       nonceDB += (nonce -> NonceInfo(id, expire))
-      sender ! DBReply(true, Some(nonce))
+      sender ! DBStrReply(true, Some(nonce))
       
     case CheckNonce(n, sign) =>
       nonceDB.get(n) match {
@@ -50,15 +50,15 @@ class AuthDB extends Actor with ActorLogging {
               val pubKey = cred.pubKey
               if (Crypto.RSA.verify(n, sign, pubKey)) {
                 val token = produceToken(ni.id)
-                sender ! DBReply(true, Some(token))
+                sender ! DBStrReply(true, Some(token))
               } else {
-                sender ! DBReply(false)
+                sender ! DBStrReply(false)
               }         
-            case None => sender ! DBReply(false)
+            case None => sender ! DBStrReply(false)
           }
           
         case None => 
-          sender ! DBReply(false)
+          sender ! DBStrReply(false)
       }      
 
     case PassWdAuth(name, passwd) =>
@@ -67,17 +67,17 @@ class AuthDB extends Actor with ActorLogging {
         case Some(cred) =>
           if (cred.passwd == passwd) {
             val token = produceToken(id)           
-            sender ! DBReply(true, Some(token))
+            sender ! DBStrReply(true, Some(token))
           } else {
-            sender ! DBReply(false)
+            sender ! DBStrReply(false)
           }
-        case None => sender ! DBReply(false)
+        case None => sender ! DBStrReply(false)
       }
 
     case TokenAuth(token) =>
       tokenDB.get(token) match {
-        case Some(ti) => sender ! DBReply(true, Some(ti.id))
-        case None => sender ! DBReply(false)
+        case Some(ti) => sender ! DBStrReply(true, Some(ti.id))
+        case None => sender ! DBStrReply(false)
       }
 
     case Tick =>

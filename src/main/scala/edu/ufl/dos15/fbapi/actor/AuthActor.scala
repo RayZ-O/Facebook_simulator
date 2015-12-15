@@ -1,10 +1,9 @@
 package edu.ufl.dos15.fbapi.actor
 
 import akka.actor.{Actor, ActorLogging, Props}
-import spray.routing.RequestContext
+import spray.routing.{RequestContext, HttpService}
 import com.roundeights.hasher.Implicits._
 import spray.http.StatusCodes
-import spray.routing.HttpService
 import edu.ufl.dos15.fbapi.Json4sProtocol
 import edu.ufl.dos15.fbapi.FBMessage._
 import edu.ufl.dos15.crypto._
@@ -42,7 +41,7 @@ class AuthActor(reqctx: RequestContext, message: Message) extends Actor
   }
 
   def waitingRegister: Receive = {
-    case DBReply(succ, id) =>
+    case DBStrReply(succ, id) =>
       succ match {
         case true => complete(StatusCodes.OK, HttpIdReply(id.get))
         case false => complete(StatusCodes.BadRequest, Error("username has already been taken"))
@@ -50,7 +49,7 @@ class AuthActor(reqctx: RequestContext, message: Message) extends Actor
   }
 
   def waitingNonce: Receive = {
-    case DBReply(succ, nonce) =>
+    case DBStrReply(succ, nonce) =>
       succ match {
         case true => complete(StatusCodes.OK, HttpIdReply(nonce.get))
         case false => complete(StatusCodes.BadRequest, Error("id not exist"))
@@ -58,7 +57,7 @@ class AuthActor(reqctx: RequestContext, message: Message) extends Actor
   }
 
   def waitingToken: Receive = {
-    case DBReply(succ, token) =>
+    case DBStrReply(succ, token) =>
       succ match {
         case true => complete(StatusCodes.OK, HttpTokenReply(token.get))
         case false => complete(StatusCodes.Unauthorized, Error("Improper authentication credentials"))
@@ -71,9 +70,3 @@ class AuthActor(reqctx: RequestContext, message: Message) extends Actor
   }
 }
 
-trait AuthActorCreator {
-  this: HttpService =>
-  def handleAuth(ctx: RequestContext, msg: Message) = {
-    actorRefFactory.actorOf(Props(classOf[AuthActor], ctx, msg))
-  }
-}

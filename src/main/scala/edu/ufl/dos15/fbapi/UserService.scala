@@ -1,9 +1,8 @@
 package edu.ufl.dos15.fbapi
 
 import scala.concurrent.duration.Duration
-import spray.routing.Route
+import spray.routing.{Route, RequestContext, HttpService}
 import spray.routing.directives.CachingDirectives._
-import spray.routing.HttpService
 import spray.http.StatusCodes
 import edu.ufl.dos15.fbapi.actor._
 
@@ -25,7 +24,7 @@ case class User (
   location: Option[Page] = None)       // The person's current location
 }
 
-trait UserService extends HttpService with PerRequestFactory with Json4sProtocol {
+trait UserService extends HttpService with RequestActorFactory with Json4sProtocol {
   import UserService._
   import FeedService._
   import FriendListService._
@@ -39,32 +38,32 @@ trait UserService extends HttpService with PerRequestFactory with Json4sProtocol
     } ~
     (path("user") & post) {  // creates a user
       entity(as[User]) { user =>
-        ctx => handleRequest(ctx, Post(user))
+        ctx => handle[DataStoreActor](ctx, Post(user))
       }
     } ~
     pathPrefix("user" / Segment) { id => // gets infomation about a user
       (path("feed") & post) {  // creates a post(feed)
         entity(as[String]) { feed =>
-          ctx => handleRequest(ctx, EdgePost(id, feed, true))
+          ctx => handle[DataStoreActor](ctx, EdgePost(id, feed, true))
         }
       } ~
       (path("friends") & post) {  // creates a friend list
         entity(as[String]) { friendList =>
-          ctx => handleRequest(ctx, EdgePost(id, friendList, false))
+          ctx => handle[DataStoreActor](ctx, EdgePost(id, friendList, false))
         }
       } ~
       get {
         parameter('fields.?) { fields =>
-          ctx => handleRequest(ctx, Get(id, fields))
+          ctx => handle[DataStoreActor](ctx, Get(id, fields))
         }
       } ~
       put { // update a user
         entity(as[String]) { values =>
-          ctx => handleRequest(ctx, Put(id, values))
+          ctx => handle[DataStoreActor](ctx, Put(id, values))
         }
       } ~
       delete { // delete a user
-        ctx => handleRequest(ctx, Delete(id))
+        ctx => handle[DataStoreActor](ctx, Delete(id))
       }
     }
   }

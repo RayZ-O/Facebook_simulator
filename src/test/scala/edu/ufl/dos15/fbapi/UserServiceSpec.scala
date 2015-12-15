@@ -21,7 +21,7 @@ class UserServiceSpec extends Specification with Specs2RouteTest with UserServic
     db ! DBTestInsert("1", """{"email": "ruizhang1011@ufl.edu",
                                "gender": "male",
                                "first_name": "Rui",
-                               "last_name": "Zhang"}""")
+                               "last_name": "Zhang"}""".getBytes())
   }
 
   sequential

@@ -1,16 +1,17 @@
 package edu.ufl.dos15.fbapi.actor
 
 import akka.actor.{Actor, ActorLogging, Props}
-import spray.routing.RequestContext
+import spray.routing.{RequestContext, HttpService}
 import edu.ufl.dos15.fbapi.Json4sProtocol
 import edu.ufl.dos15.fbapi.FBMessage._
+import scala.reflect.ClassTag
 
 class FriendListActor(reqctx: RequestContext, message: Message) extends Actor
     with ActorLogging with Json4sProtocol with RequestHandler {
   val db = context.actorSelection("/user/frienddb")
   val ctx = reqctx
 
-  val extendMatcher: PartialFunction[Any, Unit] = {
+  val matcher: PartialFunction[Any, Unit] = {
     case find: FindCommon =>
       sendToDB(find)
 
@@ -26,6 +27,7 @@ class FriendListActor(reqctx: RequestContext, message: Message) extends Actor
       throw new UnsupportedOperationException(s"Unsupported Operation $msg in friend list actor")
   }
 
-  defaultMatcher.orElse(extendMatcher)(message)
+  matcher(message)
 
 }
+

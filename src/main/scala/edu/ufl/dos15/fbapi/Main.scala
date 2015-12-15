@@ -12,9 +12,13 @@ object Main {
         val config = ConfigFactory.load()
         val serverHost = Try(config.getString("server.host")).getOrElse("localhost")
         val serverPort = Try(config.getInt("server.port")).getOrElse(8080)
-
         implicit val system = ActorSystem("FacebookSystem")
-        val db = system.actorOf(Props[EncryptedDataDB], "db")
+        // initialize database
+        val authDB = system.actorOf(Props[AuthDB], "auth-db")
+        val dataDB = system.actorOf(Props[EncryptedDataDB], "data-db")
+        val friendDB = system.actorOf(Props[FriendDB], "friend-db")
+        val pubSubDB = system.actorOf(Props[PubSubDB], "pub-sub-db")
+        // initialize server
         val server = system.actorOf(Props[Server], "server")
         IO(Http) ! Http.Bind(server, serverHost, serverPort)
     }

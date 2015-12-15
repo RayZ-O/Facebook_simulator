@@ -23,19 +23,13 @@ object FBMessage {
   case class Error(message: String) extends Message
   // databse message
   case class Fetch(id: String) extends Message
-  case class Insert(value: String) extends Message
-  case class EdgeInsert(id: String, value: String, post: Boolean) extends Message
-  case class InsertPost(id: String) extends Message
-  case class Update(id: String, value: String) extends Message
+  case class InsertBytes(value: Array[Byte]) extends Message
+  case class InsertStr(value: String) extends Message
+  case class Update(id: String, value: Array[Byte]) extends Message
   case class UpdateMul(id: String, ls: List[String]) extends Message
-  case class DBReply(success: Boolean, content: Option[String] = None) extends Message
-  case class FetchReply(success: Boolean, content: Option[String] = None) extends Message
-  case class InsertReply(success: Boolean, id: Option[String] = None) extends Message
-  case class UpdateReply(success: Boolean) extends Message
-  case class DeleteReply(success: Boolean) extends Message
-  case class PostReply(posts: List[String]) extends Message
-  case class KeyReply(success: Boolean, content: Option[Array[Byte]] = None) extends Message
-  case class DBTestInsert(id: String, value: String) extends Message
+  case class DBStrReply(success: Boolean, content: Option[String] = None) extends Message
+  case class DBBytesReply(success: Boolean, content: Option[Array[Byte]] = None) extends Message
+  case class DBTestInsert(id: String, value: Array[Byte]) extends Message
   // common
   case class FindCommon(id1: String, id2: String) extends Message
   case class Delete(id: String) extends Message

@@ -18,7 +18,7 @@ class PageServiceSpec extends Specification with Specs2RouteTest with PageServic
 
   def before() = {
     val db = system.actorOf(Props[EncryptedDataDB], "db")
-    db ! DBTestInsert("21", """{"name": "mypage"}""")
+    db ! DBTestInsert("21", """{"name": "mypage"}""".getBytes())
   }
 
   sequential

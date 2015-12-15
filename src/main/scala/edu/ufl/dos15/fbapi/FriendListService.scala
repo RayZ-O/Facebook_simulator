@@ -1,9 +1,8 @@
 package edu.ufl.dos15.fbapi
 
 import scala.concurrent.duration.Duration
-import spray.routing.Route
+import spray.routing.{Route, RequestContext, HttpService}
 import spray.routing.directives.CachingDirectives._
-import spray.routing.HttpService
 import spray.http.StatusCodes
 
 import edu.ufl.dos15.fbapi.actor._
@@ -37,7 +36,7 @@ object FriendListService {
   }
 }
 
-trait FriendListService extends HttpService with PerRequestFactory with Json4sProtocol {
+trait FriendListService extends HttpService with Json4sProtocol with RequestActorFactory {
   import FriendListService._
   import FBMessage._
 
@@ -49,22 +48,22 @@ trait FriendListService extends HttpService with PerRequestFactory with Json4sPr
     } ~
     pathPrefix("friends" / Segment) { id => // gets infomation about a friend list
       get {
-        ctx => handleRequest(ctx, Fetch(id))
+        ctx => handle[FriendListActor](ctx, Fetch(id))
       } ~
       put { // update a friends in a friend list
         parameter('ids) { ids =>
-          ctx => handleRequest(ctx, PutList(id, ids))
-        } ~
-        entity(as[String]) { values =>
-          ctx => handleRequest(ctx, Update(id, values))
-        }
+          ctx => handle[FriendListActor](ctx, PutList(id, ids))
+        } //~
+//        entity(as[String]) { values =>
+//          ctx => handle[FriendListActor](ctx, Update(id, values))
+//        }
       } ~
       delete { // delete a friend list
         parameter('ids) { ids =>
-          ctx => handleRequest(ctx, DeleteList(id, ids))
+          ctx => handle[FriendListActor](ctx, DeleteList(id, ids))
         } ~
         {
-          ctx => handleRequest(ctx, Delete(id))
+          ctx => handle[FriendListActor](ctx, Delete(id))
         }
       }
     }

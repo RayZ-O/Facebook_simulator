@@ -23,35 +23,36 @@ class FriendDB extends Actor with ActorLogging {
     case FindCommon(id1, id2) =>
       if (friendDB.contains(id1) && friendDB.contains(id2)) {
         val common = friendDB(id1).data & friendDB(id2).data
+        // TODO sender ! 
       } else {
-        sender ! FetchReply(false)
+        sender ! DBStrReply(false)
       }
 
-    case Insert(value) =>
-        sender ! InsertReply(true, Some(insert(value)))
+    case InsertStr(value) =>
+        sender ! DBStrReply(true, Some(insert(value)))
 
     case Update(id, info) =>
       friendDB.get(id) match {
         case Some(fl) =>
-          fl.info = info
-          sender ! UpdateReply(true)
-        case None => sender ! UpdateReply(false)
+          // fl.info = info TODO
+          sender ! DBStrReply(true)
+        case None => sender ! DBStrReply(false)
       }
 
     case UpdateMul(id, idList) =>
       friendDB.get(id) match {
         case Some(fl) =>
           idList foreach { id => fl.data += id }
-          sender ! UpdateReply(true)
-        case None => sender ! UpdateReply(false)
+          sender ! DBStrReply(true)
+        case None => sender ! DBStrReply(false)
       }
 
     case DeleteMul(id, idList) =>
       friendDB.get(id) match {
         case Some(fl) =>
           idList foreach { id => fl.data -= id }
-          sender ! DeleteReply(true)
-        case None => sender ! DeleteReply(false)
+          sender ! DBStrReply(true)
+        case None => sender ! DBStrReply(false)
       }
   }
 

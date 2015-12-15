@@ -38,7 +38,7 @@ class AuthDBSpec(_system: ActorSystem) extends TestKit(_system) with ImplicitSen
       val pub = kPair.getPublic().getEncoded()
       authDB ! Register(name, passwd, pub)
       expectMsgPF() {
-        case DBReply(succ, id) if (succ == true && id.isDefined) =>  
+        case DBStrReply(succ, id) if (succ == true && id.isDefined) =>  
           userId = id.get
           true
         case _ => false
@@ -50,13 +50,13 @@ class AuthDBSpec(_system: ActorSystem) extends TestKit(_system) with ImplicitSen
       val passwd = "password".sha256.hex
       val pub = kPair.getPublic().getEncoded()
       authDB ! Register(name, passwd, pub)
-      expectMsg(DBReply(false))
+      expectMsg(DBStrReply(false))
     }
     
     "send back nonce" in {
       authDB ! GetNonce(userId)
       expectMsgPF() {
-        case DBReply(succ, n) if (succ == true && n.isDefined) =>  
+        case DBStrReply(succ, n) if (succ == true && n.isDefined) =>  
           nonce = n.get
           true
         case _ => false
@@ -66,14 +66,14 @@ class AuthDBSpec(_system: ActorSystem) extends TestKit(_system) with ImplicitSen
     "send back false non-exist nonce" in {
       val sign = RSA.sign(nonce+"1", kPair.getPrivate())
       authDB ! CheckNonce(nonce+"1", sign)
-      expectMsg(DBReply(false))
+      expectMsg(DBStrReply(false))
     }
     
     "send back token for valid nonce and digital signature" in {
       val sign = RSA.sign(nonce, kPair.getPrivate())
       authDB ! CheckNonce(nonce, sign)
       expectMsgPF() {
-        case DBReply(succ, t) if (succ == true && t.isDefined) =>  
+        case DBStrReply(succ, t) if (succ == true && t.isDefined) =>  
           token = t.get
           true
         case _ => false
@@ -82,24 +82,24 @@ class AuthDBSpec(_system: ActorSystem) extends TestKit(_system) with ImplicitSen
     
     "send back false for wrong digital signature" in {
       authDB ! GetNonce(userId)
-      val reply = expectMsgClass(classOf[DBReply])
+      val reply = expectMsgClass(classOf[DBStrReply])
       reply.success should be(true)
       nonce = reply.content.get
       val priKey = RSA.generateKeyPair().getPrivate()
       val sign = RSA.sign(nonce, priKey)
       authDB ! CheckNonce(nonce, sign)
-      expectMsg(DBReply(false))
+      expectMsg(DBStrReply(false))
     }
     
     "send back false for used nonce even if signture is correct" in {
       val sign = RSA.sign(nonce, kPair.getPrivate())
       authDB ! CheckNonce(nonce, sign)
-      expectMsg(DBReply(false))
+      expectMsg(DBStrReply(false))
     }
     
     "send back true and id for valid token" in {
       authDB ! TokenAuth(token)
-      val reply = expectMsgClass(classOf[DBReply])
+      val reply = expectMsgClass(classOf[DBStrReply])
       reply.success should be(true)
       reply.content.getOrElse("") should be(userId)
     }    
