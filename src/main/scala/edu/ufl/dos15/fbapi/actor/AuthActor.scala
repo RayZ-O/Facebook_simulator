@@ -23,7 +23,7 @@ class AuthActor(reqctx: RequestContext, message: Message) extends Actor
         case _ =>
           complete(StatusCodes.BadRequest, Error("illegal username"))
       }
-          
+
     case gn: GetNonce =>
       context.become(timeoutBehaviour orElse waitingNonce)
       sendToDB(gn)
@@ -31,7 +31,7 @@ class AuthActor(reqctx: RequestContext, message: Message) extends Actor
     case pwa: PassWdAuth =>
       context.become(timeoutBehaviour orElse waitingToken)
       sendToDB(pwa)
-      
+
     case cn: CheckNonce =>
       context.become(timeoutBehaviour orElse waitingToken)
       sendToDB(cn)
@@ -41,25 +41,31 @@ class AuthActor(reqctx: RequestContext, message: Message) extends Actor
   }
 
   def waitingRegister: Receive = {
-    case DBStrReply(succ, id) =>
+    case DBStrReply(succ, id, key) =>
       succ match {
-        case true => complete(StatusCodes.OK, HttpIdReply(id.get))
+        case true =>
+          val encrypted = Crypto.RSA.encrypt(id.get, key.get)
+          complete(StatusCodes.OK, HttpDataReply(encrypted))
         case false => complete(StatusCodes.BadRequest, Error("username has already been taken"))
       }
   }
 
   def waitingNonce: Receive = {
-    case DBStrReply(succ, nonce) =>
+    case DBStrReply(succ, nonce, key) =>
       succ match {
-        case true => complete(StatusCodes.OK, HttpIdReply(nonce.get))
+        case true =>
+          val encrypted = Crypto.RSA.encrypt(nonce.get, key.get)
+          complete(StatusCodes.OK, HttpDataReply(encrypted))
         case false => complete(StatusCodes.BadRequest, Error("id not exist"))
       }
   }
 
   def waitingToken: Receive = {
-    case DBStrReply(succ, token) =>
+    case DBStrReply(succ, token, key) =>
       succ match {
-        case true => complete(StatusCodes.OK, HttpTokenReply(token.get))
+        case true =>
+          val encrypted = Crypto.RSA.encrypt(token.get, key.get)
+          complete(StatusCodes.OK, HttpDataReply(encrypted))
         case false => complete(StatusCodes.Unauthorized, Error("Improper authentication credentials"))
       }
   }

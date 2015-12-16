@@ -39,9 +39,12 @@ trait RequestHandler {
 }
 
 trait RequestActorFactory {
-  this: HttpService =>  
+  this: HttpService =>
   import scala.reflect.ClassTag
-  def handle[T](ctx: RequestContext, msg: Message)(implicit ct: ClassTag[T]) = {
-    actorRefFactory.actorOf(Props(ct.runtimeClass, ctx, msg))
+  def handle[T](ctx: RequestContext, msg: Message, key: Option[Array[Byte]] = None)(implicit ct: ClassTag[T]) = {
+    key match {
+      case Some(k) => actorRefFactory.actorOf(Props(ct.runtimeClass, ctx, msg, k))
+      case None => actorRefFactory.actorOf(Props(ct.runtimeClass, ctx, msg))
+    }
   }
 }

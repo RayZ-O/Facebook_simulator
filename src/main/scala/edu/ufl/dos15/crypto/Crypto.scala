@@ -80,17 +80,25 @@ object Crypto {
       keyGen.initialize(1024);
       keyGen.generateKeyPair()
     }
-    
+
     def decodePubKey(bytes: Array[Byte]): PublicKey = {
       val spec = new X509EncodedKeySpec(bytes)
       val factory = KeyFactory.getInstance("RSA")
       factory.generatePublic(spec)
     }
-    
+
     def decodePriKey(bytes: Array[Byte]): PrivateKey = {
       val spec = new PKCS8EncodedKeySpec(bytes)
       val factory = KeyFactory.getInstance("RSA")
       factory.generatePrivate(spec)
+    }
+
+    def encrypt(data: String, pubKey: Array[Byte]): Array[Byte] = {
+      encrypt(data.getBytes("UTF-8"), decodePubKey(pubKey))
+    }
+
+    def encrypt(data: Array[Byte], pubKey: Array[Byte]): Array[Byte] = {
+      encrypt(data, decodePubKey(pubKey))
     }
 
     def encrypt(data: String, pubKey: PublicKey): Array[Byte] = {
@@ -119,12 +127,12 @@ object Crypto {
       signer.update(data)
       signer.sign
     }
-    
-    def verify(data: String, signature: Array[Byte], pubKey: Array[Byte]): Boolean = {      
+
+    def verify(data: String, signature: Array[Byte], pubKey: Array[Byte]): Boolean = {
       verify(data.getBytes("UTF-8"), signature, decodePubKey(pubKey))
     }
-    
-    def verify(data: Array[Byte], signature: Array[Byte], pubKey: Array[Byte]): Boolean = {      
+
+    def verify(data: Array[Byte], signature: Array[Byte], pubKey: Array[Byte]): Boolean = {
       verify(data, signature, decodePubKey(pubKey))
     }
 

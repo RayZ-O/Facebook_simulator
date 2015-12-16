@@ -10,29 +10,30 @@ import org.json4s.native.JsonMethods._
 import org.json4s.native.Serialization
 import edu.ufl.dos15.fbapi.Json4sProtocol
 import edu.ufl.dos15.fbapi.FBMessage._
+import edu.ufl.dos15.crypto._
 
-class DataStoreActor(reqctx: RequestContext, message: Message) extends Actor
+case class AESCred(iv: Array[Byte], ekey: Array[Byte])
+
+class DataStoreActor(reqctx: RequestContext, message: Message, key: Array[Byte]) extends Actor
     with ActorLogging with Json4sProtocol with RequestHandler {
   val db = context.actorSelection("/user/db")
   val ctx = reqctx
-
-  var objId: String = _
-  var putObj: AnyRef = _
-  var idList: List[String] = List.empty
-  var params: Option[String] = None
+  var oid = ""
+  var cred: AESCred = _
 
   message match {
-    case Get(id, p) =>
-      context.become(timeoutBehaviour orElse waitingFetch)
-      sendToDB(Fetch(id))
+    case g: GetKey =>
+      context.become(timeoutBehaviour orElse waitingFetchCred)
+      val pubSubDB = context.actorSelection("pub-sub-db")
+      pubSubDB ! g
 
-    case Post(obj) =>
+    case PostData(id, ed, pt) =>
       context.become(timeoutBehaviour orElse waitingInsert)
-      // TODO
+      sendToDB(InsertBytes(ed.data))
 
-    case Put(id, obj) =>
-      //context.become(timeoutBehaviour orElse waitingUpdateFetch)
-      // TODO
+    case u: Update =>
+      context.become(timeoutBehaviour orElse waitingUpdate)
+      sendToDB(u)
 
     case d: Delete =>
       context.become(timeoutBehaviour orElse waitingDelete)
@@ -43,24 +44,54 @@ class DataStoreActor(reqctx: RequestContext, message: Message) extends Actor
 
   }
 
-  def waitingFetch: Receive = {
-    case DBBytesReply(succ, content) => 
+  def waitingFetchCred: Receive = {
+    case DBCredReply(succ, iv, ekey) =>
       succ match {
-        case true => complete(StatusCodes.OK, content.get)
+        case true =>
+          cred = AESCred(iv.get, ekey.get)
+          val gk = message.asInstanceOf[GetKey]
+          context.become(timeoutBehaviour orElse waitingFetchData)
+          sendToDB(Fetch(gk.objId))
+
+        case false => complete(StatusCodes.NotFound, Error("Encryption key not found"))
+      }
+  }
+
+  def waitingFetchData: Receive = {
+    case DBBytesReply(succ, content, _) =>
+      succ match {
+        case true =>
+          val encrypted = Crypto.RSA.encrypt(content.get, key)
+          complete(StatusCodes.OK, HttpDataReply(encrypted, Some(cred.iv), Some(cred.ekey)))
         case false => complete(StatusCodes.NotFound, Error("get error"))
       }
   }
 
   def waitingInsert: Receive = {
-    case DBStrReply(succ, id) =>
+    case DBStrReply(succ, objId, _) =>
       succ match {
-        case true => complete(StatusCodes.Created, HttpIdReply(id.get))
+        case true =>
+          oid = objId.get
+          context.become(timeoutBehaviour orElse waitingPublish)
+          val pd = message.asInstanceOf[PostData]
+          val pubSubDB = context.actorSelection("pub-sub-db")
+          pubSubDB ! Publish(pd.id, key, oid, pd.ed.iv, pd.ed.keys, pd.pType)
         case false => complete(StatusCodes.BadRequest, Error("post error"))
       }
   }
 
+  def waitingPublish: Receive = {
+    case DBSuccessReply(succ) =>
+      succ match {
+        case true =>
+          val encrypted = Crypto.RSA.encrypt(oid, key)
+          complete(StatusCodes.OK, HttpDataReply(encrypted))
+        case false => complete(StatusCodes.BadRequest, Error("publish error"))
+      }
+  }
+
   def waitingUpdate: Receive = {
-    case DBBytesReply(succ, content) =>
+    case DBSuccessReply(succ) =>
       succ match {
         case true => complete(StatusCodes.OK, HttpSuccessReply(succ))
         case false => complete(StatusCodes.NotFound, Error("put-p2 error"))
@@ -68,7 +99,7 @@ class DataStoreActor(reqctx: RequestContext, message: Message) extends Actor
   }
 
   def waitingDelete: Receive = {
-    case DBBytesReply(succ, content) =>
+    case DBSuccessReply(succ) =>
       succ match {
         case true => complete(StatusCodes.OK, HttpSuccessReply(succ))
         case false => complete(StatusCodes.NotFound, Error("delete error"))

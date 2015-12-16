@@ -36,30 +36,18 @@ trait UserService extends HttpService with RequestActorFactory with Json4sProtoc
     (path("user") & get) {
       complete(StatusCodes.OK)
     } ~
-    (path("user") & post) {  // creates a user
-      entity(as[User]) { user =>
-        ctx => handle[DataStoreActor](ctx, Post(user))
-      }
-    } ~
     pathPrefix("user" / Segment) { id => // gets infomation about a user
-      (path("feed") & post) {  // creates a post(feed)
-        entity(as[String]) { feed =>
-          ctx => handle[DataStoreActor](ctx, EdgePost(id, feed, true))
-        }
-      } ~
-      (path("friends") & post) {  // creates a friend list
-        entity(as[String]) { friendList =>
-          ctx => handle[DataStoreActor](ctx, EdgePost(id, friendList, false))
+      (path("user") & post) {  // creates a user
+        entity(as[EncryptedData]) { ed =>
+          ctx => handle[DataStoreActor](ctx, PostData(id, ed, "profile"))
         }
       } ~
       get {
-        parameter('fields.?) { fields =>
-          ctx => handle[DataStoreActor](ctx, Get(id, fields))
-        }
+        ctx => handle[DataStoreActor](ctx, Fetch(id))
       } ~
       put { // update a user
-        entity(as[String]) { values =>
-          ctx => handle[DataStoreActor](ctx, Put(id, values))
+        entity(as[Array[Byte]]) { value =>
+          ctx => handle[DataStoreActor](ctx, Update(id, value))
         }
       } ~
       delete { // delete a user

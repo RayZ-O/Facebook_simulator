@@ -65,18 +65,18 @@ trait FeedService extends HttpService with RequestActorFactory with Json4sProtoc
     (path("feed") & get) {
       complete(StatusCodes.OK)
     } ~
-    (path("feed" / "new") & get) {
-      ctx => handle[DataStoreActor](ctx, GetNewPosts())
-    } ~
     pathPrefix("feed" / Segment) { id => // gets infomation about a post(feed)
-      get {
-        parameter('fields.?) { fields =>
-          ctx => handle[DataStoreActor](ctx, Get(id, fields))
+      (path("feed") & post) {  // creates a post
+        entity(as[EncryptedData]) { ed =>
+          ctx => handle[DataStoreActor](ctx, PostData(id, ed, "feed"))
         }
       } ~
+      get {
+        ctx => handle[DataStoreActor](ctx, Fetch(id))
+      } ~
       put { // update a post(feed)
-        entity(as[String]) { values =>
-          ctx => handle[DataStoreActor](ctx, Put(id, values))
+        entity(as[Array[Byte]]) { value =>
+          ctx => handle[DataStoreActor](ctx, Update(id, value))
         }
       } ~
       delete { // delete a post(feed)

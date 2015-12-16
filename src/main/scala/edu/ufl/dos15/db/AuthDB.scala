@@ -32,15 +32,19 @@ class AuthDB extends Actor with ActorLogging {
         val id = generateId()
         nameDB += (name -> id)
         credDB += (id -> Credentials(passwd, pub))
-        sender ! DBStrReply(true, Some(id))
+        sender ! DBStrReply(true, Some(id), Some(pub))
       }
 
     case GetNonce(id) =>
-      val nonce = Crypto.generateNonce
-      val expire = System.currentTimeMillis + 300000L
-      nonceDB += (nonce -> NonceInfo(id, expire))
-      sender ! DBStrReply(true, Some(nonce))
-      
+      credDB.get(id) match {
+        case Some(cred) =>
+          val nonce = Crypto.generateNonce
+          val expire = System.currentTimeMillis + 300000L
+          nonceDB += (nonce -> NonceInfo(id, expire))
+          sender ! DBStrReply(true, Some(nonce), Some(cred.pubKey))
+        case None => sender ! DBStrReply(false)
+      }
+
     case CheckNonce(n, sign) =>
       nonceDB.get(n) match {
         case Some(ni) =>
@@ -50,24 +54,24 @@ class AuthDB extends Actor with ActorLogging {
               val pubKey = cred.pubKey
               if (Crypto.RSA.verify(n, sign, pubKey)) {
                 val token = produceToken(ni.id)
-                sender ! DBStrReply(true, Some(token))
+                sender ! DBStrReply(true, Some(token), Some(pubKey))
               } else {
                 sender ! DBStrReply(false)
-              }         
+              }
             case None => sender ! DBStrReply(false)
           }
-          
-        case None => 
+
+        case None =>
           sender ! DBStrReply(false)
-      }      
+      }
 
     case PassWdAuth(name, passwd) =>
       val id = nameDB.getOrElse(name, "")
       credDB.get(id) match {
         case Some(cred) =>
           if (cred.passwd == passwd) {
-            val token = produceToken(id)           
-            sender ! DBStrReply(true, Some(token))
+            val token = produceToken(id)
+            sender ! DBStrReply(true, Some(token), Some(cred.pubKey))
           } else {
             sender ! DBStrReply(false)
           }
@@ -91,7 +95,7 @@ class AuthDB extends Actor with ActorLogging {
     tokenDB += (token -> TokenInfo(id, expire))
     token
   }
-  
+
   def generateId() = {
     sequenceNum += 1
     dbNo + System.currentTimeMillis().toString + sequenceNum

@@ -40,30 +40,18 @@ trait PageService extends HttpService with RequestActorFactory with Json4sProtoc
     (path("page") & get) {
       complete(StatusCodes.OK)
     } ~
-    (path("page") & post) {  // creates a page
-      entity(as[Page]) { page =>
-        ctx => handle[DataStoreActor](ctx, Post(page))
-      }
-    } ~
     pathPrefix("page" / Segment) { id => // gets infomation about a page
-      (path("feed") & post) {  // creates a post(feed)
-        entity(as[Feed]) { feed =>
-          ctx => handle[DataStoreActor](ctx, EdgePost(id, feed.addFromAndCreatedTime(id), true))
-        }
-      } ~
-      (path("friends") & post) {  // creates a friend list
-        entity(as[FriendList]) { friendList =>
-          ctx => handle[DataStoreActor](ctx, EdgePost(id, friendList.addOwner(id), false))
+      (path("page") & post) {  // creates a page
+        entity(as[EncryptedData]) { ed =>
+          ctx => handle[DataStoreActor](ctx, PostData(id, ed, "profile"))
         }
       } ~
       get {
-        parameter('fields.?) { fields =>
-          ctx => handle[DataStoreActor](ctx, Get(id, fields))
-        }
+        ctx => handle[DataStoreActor](ctx, Fetch(id))
       } ~
       put { // update a page
-        entity(as[String]) { values =>
-          ctx => handle[DataStoreActor](ctx, Put(id, values))
+        entity(as[Array[Byte]]) { value =>
+          ctx => handle[DataStoreActor](ctx, Update(id, value))
         }
       } ~
       delete { // delete a page
