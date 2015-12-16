@@ -13,13 +13,16 @@ class AuthActor(reqctx: RequestContext, message: Message) extends Actor
   val db = context.actorSelection("/user/authdb")
   val ctx = reqctx
   val namePattern = "^[a-z0-9_-]{3,15}$".r
+  val priKey: Array[Byte] = new Array[Byte](1024)
 
   message match {
-    case Register(name, passwd, pub) =>
-      name match {
+    case RegisterCred(c, pub) =>
+      val cred = new String(Crypto.RSA.decrypt(c, priKey))
+      val parts = cred.split("\\|")
+      parts(0) match {
         case namePattern() =>
           context.become(timeoutBehaviour orElse waitingRegister)
-          sendToDB(Register(name, repeatedHash(3, passwd), pub))
+          sendToDB(Register(parts(0), repeatedHash(5, parts(1)), pub))
         case _ =>
           complete(StatusCodes.BadRequest, Error("illegal username"))
       }
@@ -43,9 +46,7 @@ class AuthActor(reqctx: RequestContext, message: Message) extends Actor
   def waitingRegister: Receive = {
     case DBStrReply(succ, id, key) =>
       succ match {
-        case true =>
-          val encrypted = Crypto.RSA.encrypt(id.get, key.get)
-          complete(StatusCodes.OK, HttpDataReply(encrypted))
+        case true => complete(StatusCodes.Created, HttpIdReply(id.get))
         case false => complete(StatusCodes.BadRequest, Error("username has already been taken"))
       }
   }

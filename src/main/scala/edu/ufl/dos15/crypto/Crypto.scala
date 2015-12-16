@@ -111,6 +111,10 @@ object Crypto {
       cipher.doFinal(data)
     }
 
+    def decrypt(data: Array[Byte], priKey: Array[Byte]): Array[Byte] = {
+      decrypt(data, decodePriKey(priKey))
+    }
+
     def decrypt(data: Array[Byte], priKey: PrivateKey): Array[Byte] = {
       val cipher = Cipher.getInstance("RSA")
       cipher.init(Cipher.DECRYPT_MODE, priKey)

@@ -9,17 +9,20 @@ class PubSubDB extends Actor with ActorLogging {
   import scala.collection.mutable.LinkedHashMap
   var feedChans = new HashMap[String, LinkedHashMap[String, Array[Byte]]]
   var profileChans = new HashMap[String, HashMap[String, Array[Byte]]]
+  var friendChans = new HashMap[String, HashMap[String, Array[Byte]]]
   var selfPostChans = new HashMap[String, HashMap[String, Array[Byte]]]
 
   def receive = {
     // TODO owner key is Epub(Sym)
-    case Publish(ownerId, ownerKey, objId, iv, keys, pType) =>
+    case Publish(ownerId, objId, iv, keys, pType) =>
       ivDB += objId -> iv
       pType match {
         case "feed" =>
+          val ownerKey = keys(ownerId)
           addToChan(selfPostChans, objId, ownerId, ownerKey)
           keys foreach { case (id, key) => addToChan(feedChans, objId, id, key) }
         case "profile" => keys foreach { case (id, key) => addToChan(profileChans, objId, id, key) }
+        case "friend" => keys foreach { case (id, key) => addToChan(friendChans, objId, id, key) }
       }
       sender ! DBSuccessReply(true)
 
@@ -28,6 +31,7 @@ class PubSubDB extends Actor with ActorLogging {
       val ekey = pType match {
         case "feed" => if (feedChans.contains(ownerId)) feedChans(ownerId).get(objId) else None
         case "profile" => if (profileChans.contains(ownerId)) profileChans(ownerId).get(objId) else None
+        case "friend" => if (friendChans.contains(ownerId)) friendChans(ownerId).get(objId) else None
       }
       if (iv.isDefined && ekey.isDefined) {
         sender ! DBCredReply(true, iv, ekey)

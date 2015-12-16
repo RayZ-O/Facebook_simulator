@@ -52,7 +52,6 @@ class DataStoreActor(reqctx: RequestContext, message: Message, key: Array[Byte])
           val gk = message.asInstanceOf[GetKey]
           context.become(timeoutBehaviour orElse waitingFetchData)
           sendToDB(Fetch(gk.objId))
-
         case false => complete(StatusCodes.NotFound, Error("Encryption key not found"))
       }
   }
@@ -74,7 +73,7 @@ class DataStoreActor(reqctx: RequestContext, message: Message, key: Array[Byte])
           context.become(timeoutBehaviour orElse waitingPublish)
           val pd = message.asInstanceOf[PostData]
           val pubSubDB = context.actorSelection("pub-sub-db")
-          pubSubDB ! Publish(pd.id, key, oid, pd.ed.iv, pd.ed.keys, pd.pType)
+          pubSubDB ! Publish(pd.id, oid, pd.ed.iv, pd.ed.keys, pd.pType)
         case false => complete(StatusCodes.BadRequest, Error("post error"))
       }
   }
@@ -82,9 +81,7 @@ class DataStoreActor(reqctx: RequestContext, message: Message, key: Array[Byte])
   def waitingPublish: Receive = {
     case DBSuccessReply(succ) =>
       succ match {
-        case true =>
-          val encrypted = Crypto.RSA.encrypt(oid, key)
-          complete(StatusCodes.OK, HttpDataReply(encrypted))
+        case true => complete(StatusCodes.Created, HttpIdReply(oid))
         case false => complete(StatusCodes.BadRequest, Error("publish error"))
       }
   }
