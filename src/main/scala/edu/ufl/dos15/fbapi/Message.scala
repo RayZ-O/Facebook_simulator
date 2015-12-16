@@ -4,10 +4,13 @@ object FBMessage {
   sealed trait Message
   // server message
   import scala.collection.mutable.HashMap
-  case class EncryptedData(data: Array[Byte], iv: Array[Byte],
-      keys: HashMap[String, Array[Byte]]) extends Message
+  case class EncryptedData(data: Array[Byte],
+                           iv: Array[Byte],
+                           keys: HashMap[String, Array[Byte]]) extends Message
   case class PostData(id: String, ed: EncryptedData, pType: String) extends Message
-  case class GetKey(ownerId: String, objId: String) extends Message
+  case class GetKey(ownerId: String, objId: String, pType: String) extends Message
+  case class PullFeed(id: String, start: Int) extends Message
+  case class GetSelfPost(id: String) extends Message
   case class PutList(id: String, ids: String) extends Message
   case class DeleteList(id: String, ids: String) extends Message
   case class Publish(ownerId: String, ownerKey: Array[Byte], objId: String, iv: Array[Byte],
@@ -16,8 +19,9 @@ object FBMessage {
   case class HttpSuccessReply(success: Boolean) extends Message
   case class HttpIdReply(id: String) extends Message
   case class HttpListReply(list: List[String]) extends Message
-  case class HttpDataReply(data: Array[Byte], iv: Option[Array[Byte]] = None,
-      key: Option[Array[Byte]] = None) extends Message
+  case class HttpDataReply(data: Array[Byte],
+                           iv: Option[Array[Byte]] = None,
+                           key: Option[Array[Byte]] = None) extends Message
   case class Error(message: String) extends Message
   // databse message
   case class Fetch(id: String) extends Message
@@ -26,12 +30,18 @@ object FBMessage {
   case class Update(id: String, value: Array[Byte]) extends Message
   case class UpdateMul(id: String, ls: List[String]) extends Message
   case class DBSuccessReply(success: Boolean) extends Message
-  case class DBStrReply(success: Boolean, content: Option[String] = None,
-      key: Option[Array[Byte]] = None) extends Message
-  case class DBBytesReply(success: Boolean, content: Option[Array[Byte]] = None,
-      key: Option[Array[Byte]] = None) extends Message
-  case class DBCredReply(success: Boolean, iv: Option[Array[Byte]] = None,
-      key: Option[Array[Byte]] = None) extends Message
+  case class DBStrReply(success: Boolean,
+                        content: Option[String] = None,
+                        key: Option[Array[Byte]] = None) extends Message
+  case class DBBytesReply(success: Boolean,
+                          content: Option[Array[Byte]] = None,
+                          key: Option[Array[Byte]] = None) extends Message
+  case class DBCredReply(success: Boolean,
+                         iv: Option[Array[Byte]] = None,
+                         key: Option[Array[Byte]] = None) extends Message
+  case class DBPullReply(success: Boolean,
+                         ivs: Option[Map[String, Array[Byte]]] = None,
+                         keys: Option[Map[String, Array[Byte]]] = None) extends Message
   case class DBTestInsert(id: String, value: Array[Byte]) extends Message
   // common
   case class FindCommon(id1: String, id2: String) extends Message

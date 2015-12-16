@@ -98,6 +98,7 @@ class Client(id: String, host: String, port: Int, page: Boolean) extends Actor
     val encyptData = AES.encrypt(dataWithSign, symKey, iv)
     val keyBytes = symKey.getEncoded()
     val keys = friendsPubKeys.map{ p => (p._1 -> RSA.encrypt(keyBytes, p._2)) }
+    keys += id -> RSA.encrypt(keyBytes, pubKey)
     EncryptedData(encyptData, iv.getIV(), keys)
   }
 
@@ -135,7 +136,7 @@ class Client(id: String, host: String, port: Int, page: Boolean) extends Actor
     responseFuture onComplete {
       case Success(ed) =>
         try {
-          val res = decyptData(ed.data, ed.iv, ed.key)
+          val res = decyptData(ed.data, ed.iv.get, ed.key.get)
           res._1 match {
             case true =>
               val json = filterFields(nodeId.get, params, res._2)

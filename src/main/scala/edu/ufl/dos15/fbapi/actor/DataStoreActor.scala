@@ -61,8 +61,7 @@ class DataStoreActor(reqctx: RequestContext, message: Message, key: Array[Byte])
     case DBBytesReply(succ, content, _) =>
       succ match {
         case true =>
-          val encrypted = Crypto.RSA.encrypt(content.get, key)
-          complete(StatusCodes.OK, HttpDataReply(encrypted, Some(cred.iv), Some(cred.ekey)))
+          complete(StatusCodes.OK, HttpDataReply(content.get, Some(cred.iv), Some(cred.ekey)))
         case false => complete(StatusCodes.NotFound, Error("get error"))
       }
   }
@@ -94,7 +93,7 @@ class DataStoreActor(reqctx: RequestContext, message: Message, key: Array[Byte])
     case DBSuccessReply(succ) =>
       succ match {
         case true => complete(StatusCodes.OK, HttpSuccessReply(succ))
-        case false => complete(StatusCodes.NotFound, Error("put-p2 error"))
+        case false => complete(StatusCodes.NotFound, Error("update error"))
       }
   }
 

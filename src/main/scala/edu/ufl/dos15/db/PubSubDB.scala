@@ -5,24 +5,53 @@ import edu.ufl.dos15.fbapi.FBMessage._
 
 class PubSubDB extends Actor with ActorLogging {
   import scala.collection.mutable.HashMap
-  import scala.collection.mutable.ListMap
   var ivDB = new HashMap[String, Array[Byte]]
-  var feedChans = new HashMap[String, ListMap[String, Array[Byte]]]
+  import scala.collection.mutable.LinkedHashMap
+  var feedChans = new HashMap[String, LinkedHashMap[String, Array[Byte]]]
   var profileChans = new HashMap[String, HashMap[String, Array[Byte]]]
-  var selfChans = new HashMap[String, HashMap[String, Array[Byte]]]
+  var selfPostChans = new HashMap[String, HashMap[String, Array[Byte]]]
 
   def receive = {
+    // TODO owner key is Epub(Sym)
     case Publish(ownerId, ownerKey, objId, iv, keys, pType) =>
       ivDB += objId -> iv
-      addToChan(selfChans, objId, ownerId, ownerKey)
       pType match {
-        case "feed" => keys foreach { case (id, key) => addToChan(feedChans, objId, id, key) }
+        case "feed" =>
+          addToChan(selfPostChans, objId, ownerId, ownerKey)
+          keys foreach { case (id, key) => addToChan(feedChans, objId, id, key) }
         case "profile" => keys foreach { case (id, key) => addToChan(profileChans, objId, id, key) }
       }
       sender ! DBSuccessReply(true)
 
-    case GetKey(ownerId, objId) =>
+    case GetKey(ownerId, objId, pType) =>
+      val iv = ivDB.get(objId)
+      val ekey = pType match {
+        case "feed" => if (feedChans.contains(ownerId)) feedChans(ownerId).get(objId) else None
+        case "profile" => if (profileChans.contains(ownerId)) profileChans(ownerId).get(objId) else None
+      }
+      if (iv.isDefined && ekey.isDefined) {
+        sender ! DBCredReply(true, iv, ekey)
+      } else {
+        sender ! DBCredReply(false)
+      }
 
+    case PullFeed(id, start) =>
+      feedChans.get(id) match {
+        case Some(m) =>
+          val keys = m.slice(m.size - start - 5, m.size - start).toMap
+          val ivs = keys collect { case (k, v) => (k, ivDB(k)) }
+          sender ! DBPullReply(true, Some(ivs), Some(keys))
+        case None => sender ! DBPullReply(false)
+      }
+
+    case GetSelfPost(id) =>
+      selfPostChans.get(id) match {
+        case Some(p) =>
+           val keys = p.toMap
+           val ivs = keys collect { case (k, v) => (k, ivDB(k)) }
+           sender ! DBPullReply(true, Some(ivs), Some(keys))
+        case None => sender ! DBPullReply(false)
+      }
   }
 
   def addToChan[T <: collection.mutable.Map[String, Array[Byte]]](chan: HashMap[String, T],
