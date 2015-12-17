@@ -28,7 +28,7 @@ object PageService {
     zip: Option[String] = None)
 }
 
-trait PageService extends HttpService with RequestActorFactory with Json4sProtocol {
+trait PageService extends HttpService with RequestActorFactory with Json4sProtocol with Authenticator {
   import PageService._
   import FeedService._
   import FriendListService._
@@ -40,22 +40,26 @@ trait PageService extends HttpService with RequestActorFactory with Json4sProtoc
     (path("page") & get) {
       complete(StatusCodes.OK)
     } ~
-    pathPrefix("page" / Segment) { id => // gets infomation about a page
-      (path("page") & post) {  // creates a page
+    (path("page") & post) {  // creates a page
+      authenticate(tokenAuthenticator) { uid =>
         entity(as[EncryptedData]) { ed =>
-          ctx => handle[DataStoreActor](ctx, PostData(id, ed, "profile"))
+          ctx => handle[DataStoreActor](ctx, PostData(uid, ed, "profile"))
         }
-      } ~
-      get {
-        ctx => handle[DataStoreActor](ctx, Fetch(id))
-      } ~
-      put { // update a page
-        entity(as[Array[Byte]]) { value =>
-          ctx => handle[DataStoreActor](ctx, Update(id, value))
+      }
+    } ~
+    pathPrefix("page" / Segment) { objId => // gets infomation about a page
+      authenticate(tokenAuthenticator) { uid =>
+        get {
+          ctx => handle[DataStoreActor](ctx, GetKey(uid, objId, "profile"))
+        } ~
+        put { // update a page
+          entity(as[Array[Byte]]) { value =>
+            ctx => handle[DataStoreActor](ctx, Update(objId, value))
+          }
+        } ~
+        delete { // delete a page
+          ctx => handle[DataStoreActor](ctx, Delete(objId))
         }
-      } ~
-      delete { // delete a page
-        ctx => handle[DataStoreActor](ctx, Delete(id))
       }
     }
   }

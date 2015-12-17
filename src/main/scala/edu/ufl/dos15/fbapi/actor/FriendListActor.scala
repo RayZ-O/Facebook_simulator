@@ -25,11 +25,6 @@ class FriendListActor(reqctx: RequestContext, message: Message, key: Array[Byte]
       context.become(timeoutBehaviour orElse waitingFetch)
       sendToDB(find)
 
-    case u: Update =>
-      val dataDB = context.actorSelection("/user/data-db")
-      context.become(timeoutBehaviour orElse waitingUpdate)
-      dataDB ! u
-
     case PutList(id, ids) =>
       val idList = ids.split(",").toList
       context.become(timeoutBehaviour orElse waitingUpdate)

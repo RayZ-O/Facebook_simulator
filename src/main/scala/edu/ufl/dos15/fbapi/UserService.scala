@@ -24,7 +24,7 @@ case class User (
   location: Option[Page] = None)       // The person's current location
 }
 
-trait UserService extends HttpService with RequestActorFactory with Json4sProtocol {
+trait UserService extends HttpService with RequestActorFactory with Json4sProtocol with Authenticator {
   import UserService._
   import FeedService._
   import FriendListService._
@@ -36,22 +36,26 @@ trait UserService extends HttpService with RequestActorFactory with Json4sProtoc
     (path("user") & get) {
       complete(StatusCodes.OK)
     } ~
-    pathPrefix("user" / Segment) { id => // gets infomation about a user
-      (path("user") & post) {  // creates a user
-        entity(as[EncryptedData]) { ed =>
-          ctx => handle[DataStoreActor](ctx, PostData(id, ed, "profile"))
+    (path("user") & post) {  // creates a user
+        authenticate(tokenAuthenticator) { uid =>
+          entity(as[EncryptedData]) { ed =>
+            ctx => handle[DataStoreActor](ctx, PostData(uid, ed, "profile"))
+          }
         }
       } ~
-      get {
-        ctx => handle[DataStoreActor](ctx, Fetch(id))
-      } ~
-      put { // update a user
-        entity(as[Array[Byte]]) { value =>
-          ctx => handle[DataStoreActor](ctx, Update(id, value))
+    pathPrefix("user" / Segment) { objId => // gets infomation about a user
+      authenticate(tokenAuthenticator) { uid =>
+        get {
+          ctx => handle[DataStoreActor](ctx, GetKey(uid, objId, "profile"))
+        } ~
+        put { // update a user
+          entity(as[Array[Byte]]) { value =>
+            ctx => handle[DataStoreActor](ctx, Update(objId, value))
+          }
+        } ~
+        delete { // delete a user
+          ctx => handle[DataStoreActor](ctx, Delete(objId))
         }
-      } ~
-      delete { // delete a user
-        ctx => handle[DataStoreActor](ctx, Delete(id))
       }
     }
   }

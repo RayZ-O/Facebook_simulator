@@ -36,7 +36,7 @@ object FriendListService {
   }
 }
 
-trait FriendListService extends HttpService with Json4sProtocol with RequestActorFactory {
+trait FriendListService extends HttpService with Json4sProtocol with RequestActorFactory with Authenticator {
   import FriendListService._
   import FBMessage._
 
@@ -46,24 +46,38 @@ trait FriendListService extends HttpService with Json4sProtocol with RequestActo
     (path("friends") & get) {
       complete(StatusCodes.OK)
     } ~
-    pathPrefix("friends" / Segment) { id => // gets infomation about a friend list
-      get {
-        ctx => handle[FriendListActor](ctx, Fetch(id))
-      } ~
-      put { // update a friends in a friend list
-        parameter('ids) { ids =>
-          ctx => handle[FriendListActor](ctx, PutList(id, ids))
-        } //~
-//        entity(as[String]) { values =>
-//          ctx => handle[FriendListActor](ctx, Update(id, values))
-//        }
-      } ~
-      delete { // delete a friend list
-        parameter('ids) { ids =>
-          ctx => handle[FriendListActor](ctx, DeleteList(id, ids))
+    (path("friend") & post) {  // creates a friend list
+        authenticate(tokenAuthenticator) { uid =>
+          entity(as[EncryptedData]) { ed =>
+            ctx => handle[FriendListActor](ctx, PostData(uid, ed, "friend"))
+          }
+        }
+    } ~
+    pathPrefix("friends" / Segment) { objId => // gets infomation about a friend list
+      authenticate(tokenAuthenticator) { uid =>
+        get {
+          path("list") {
+            ctx => handle[FriendListActor](ctx, FetchList(objId))
+          } ~
+          path("info") {
+            ctx => handle[DataStoreActor](ctx, GetKey(uid, objId, "friend"))
+          }
         } ~
-        {
-          ctx => handle[FriendListActor](ctx, Delete(id))
+        put { // update a friends in a friend list
+          parameter('ids) { ids =>
+            ctx => handle[FriendListActor](ctx, PutList(objId, ids))
+          } ~
+          entity(as[Array[Byte]]) { value =>
+            ctx => handle[DataStoreActor](ctx, Update(objId, value))
+          }
+        } ~
+        delete { // delete a friend list
+          parameter('ids) { ids =>
+            ctx => handle[FriendListActor](ctx, DeleteList(objId, ids))
+          } ~
+          pathEnd {
+            ctx => handle[FriendListActor](ctx, Delete(objId))
+          }
         }
       }
     }

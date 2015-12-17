@@ -8,7 +8,7 @@ trait AuthService extends HttpService with RequestActorFactory with Json4sProtoc
 
   val authRoute: Route = {
     (path("register") & post) {
-      entity(as[Register]) { reg =>
+      entity(as[RegisterCred]) { reg =>
         ctx => handle[AuthActor](ctx, reg)
       }
     } ~
@@ -17,10 +17,16 @@ trait AuthService extends HttpService with RequestActorFactory with Json4sProtoc
         ctx => handle[AuthActor](ctx, GetNonce(id))
       }
     }
-    (path("login") & post) {
+    (path("login" / "password") & post) {
       entity(as[PassWdAuth]) { cred =>
         ctx => handle[AuthActor](ctx, cred)
       }
+    } ~
+    (path("login" / "pubkey") & post) {
+      entity(as[CheckNonce]) { cn =>
+        ctx => handle[AuthActor](ctx, cn)
+      }
     }
+
   }
 }

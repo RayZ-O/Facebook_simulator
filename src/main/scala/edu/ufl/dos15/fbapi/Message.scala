@@ -41,9 +41,6 @@ object FBMessage {
   case class DBCredReply(success: Boolean,
                          iv: Option[Array[Byte]] = None,
                          key: Option[Array[Byte]] = None) extends Message
-  case class DBPullReply(success: Boolean,
-                         ivs: Option[Map[String, Array[Byte]]] = None,
-                         keys: Option[Map[String, Array[Byte]]] = None) extends Message
   case class DBTestInsert(id: String, value: Array[Byte]) extends Message
   case class DBTestToken(id: String, token: String) extends Message
   // common

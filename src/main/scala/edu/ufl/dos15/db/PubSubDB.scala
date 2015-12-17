@@ -42,19 +42,17 @@ class PubSubDB extends Actor with ActorLogging {
     case PullFeed(id, start) =>
       feedChans.get(id) match {
         case Some(m) =>
-          val keys = m.slice(m.size - start - 5, m.size - start).toMap
-          val ivs = keys collect { case (k, v) => (k, ivDB(k)) }
-          sender ! DBPullReply(true, Some(ivs), Some(keys))
-        case None => sender ! DBPullReply(false)
+          val ids = m.slice(m.size - start - 5, m.size - start).keySet.toList
+          sender ! DBListReply(true, Some(ids))
+        case None => sender ! DBListReply(false)
       }
 
     case GetSelfPost(id) =>
       selfPostChans.get(id) match {
         case Some(p) =>
-           val keys = p.toMap
-           val ivs = keys collect { case (k, v) => (k, ivDB(k)) }
-           sender ! DBPullReply(true, Some(ivs), Some(keys))
-        case None => sender ! DBPullReply(false)
+           val ids = p.keySet.toList
+           sender ! DBListReply(true, Some(ids))
+        case None => sender ! DBListReply(false)
       }
   }
 

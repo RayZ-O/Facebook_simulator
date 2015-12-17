@@ -6,8 +6,7 @@ import akka.util.Timeout
 import akka.pattern.ask
 import spray.routing.authentication.ContextAuthenticator
 import spray.routing.{Rejection, AuthenticationFailedRejection, HttpService}
-import spray.routing.AuthenticationFailedRejection.CredentialsMissing
-import spray.routing.AuthenticationFailedRejection.CredentialsRejected
+import spray.routing.AuthenticationFailedRejection._
 
 trait Authenticator {
   this: HttpService =>

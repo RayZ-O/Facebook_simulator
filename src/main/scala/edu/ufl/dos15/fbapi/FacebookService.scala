@@ -5,12 +5,14 @@ import spray.httpx.Json4sSupport
 import org.json4s._
 import org.json4s.ext.EnumSerializer
 
-trait FacebookService extends UserService
+trait FacebookService extends AuthService
+                      with UserService
                       with PageService
                       with FeedService
                       with FriendListService {
 
-    val FacebookAPIRoute = userRoute ~          // A single user node
+    val FacebookAPIRoute = authRoute ~
+                           userRoute ~          // A single user node
                            pageRoute ~          // A Facebook page
                            feedRoute ~          // An individual entry in a feed.
                            friendListRoute      // This represents a user's friend list on Facebook

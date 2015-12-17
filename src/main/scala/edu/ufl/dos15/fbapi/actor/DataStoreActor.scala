@@ -22,10 +22,10 @@ class DataStoreActor(reqctx: RequestContext, message: Message, key: Array[Byte])
   var cred: AESCred = _
 
   message match {
-    case g: GetKey =>
+    case gk: GetKey =>
       context.become(timeoutBehaviour orElse waitingFetchCred)
       val pubSubDB = context.actorSelection("pub-sub-db")
-      pubSubDB ! g
+      pubSubDB ! gk
 
     case PostData(id, ed, pt) =>
       context.become(timeoutBehaviour orElse waitingInsert)
@@ -38,6 +38,14 @@ class DataStoreActor(reqctx: RequestContext, message: Message, key: Array[Byte])
     case d: Delete =>
       context.become(timeoutBehaviour orElse waitingDelete)
       sendToDB(d)
+
+    case p: PullFeed =>
+      context.become(timeoutBehaviour orElse waitingPull)
+      sendToDB(p)
+
+    case gp: GetSelfPost =>
+      context.become(timeoutBehaviour orElse waitingPull)
+      sendToDB(gp)
 
     case msg =>
       throw new UnsupportedOperationException(s"Unsupported Operation $msg in per-request actor")
@@ -99,6 +107,14 @@ class DataStoreActor(reqctx: RequestContext, message: Message, key: Array[Byte])
       succ match {
         case true => complete(StatusCodes.OK, HttpSuccessReply(succ))
         case false => complete(StatusCodes.NotFound, Error("delete error"))
+      }
+  }
+
+  def waitingPull: Receive = {
+     case DBListReply(succ, lst) =>
+      succ match {
+        case true => complete(StatusCodes.OK, HttpListReply(lst.get))
+        case false => complete(StatusCodes.NotFound, Error("pull error"))
       }
   }
 }

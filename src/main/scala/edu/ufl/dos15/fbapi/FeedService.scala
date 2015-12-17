@@ -55,7 +55,7 @@ object FeedService {
   }
 }
 
-trait FeedService extends HttpService with RequestActorFactory with Json4sProtocol {
+trait FeedService extends HttpService with RequestActorFactory with Json4sProtocol with Authenticator {
   import FeedService._
   import FBMessage._
 
@@ -65,23 +65,42 @@ trait FeedService extends HttpService with RequestActorFactory with Json4sProtoc
     (path("feed") & get) {
       complete(StatusCodes.OK)
     } ~
-    pathPrefix("feed" / Segment) { id => // gets infomation about a post(feed)
-      (path("feed") & post) {  // creates a post
+    (path("feed") & post) {  // creates a post
+      authenticate(tokenAuthenticator) { uid =>
         entity(as[EncryptedData]) { ed =>
-          ctx => handle[DataStoreActor](ctx, PostData(id, ed, "feed"))
+          ctx => handle[DataStoreActor](ctx, PostData(uid, ed, "feed"))
+        }
+      }
+    } ~
+    path("feed" / Segment) { objId => // gets infomation about a post(feed)
+      authenticate(tokenAuthenticator) { uid =>
+        get {
+          ctx => handle[DataStoreActor](ctx, GetKey(uid, objId, "feed"))
+        } ~
+        put { // update a post(feed)
+          entity(as[Array[Byte]]) { value =>
+            ctx => handle[DataStoreActor](ctx, Update(objId, value))
+          }
+        } ~
+        delete { // delete a post(feed)
+          ctx => handle[DataStoreActor](ctx, Delete(objId))
+        }
+      }
+    } ~
+    get {
+      path("feed" / "pull") {
+        authenticate(tokenAuthenticator) { uid =>
+          parameter('start.as[Int]) { start =>
+            ctx => handle[DataStoreActor](ctx,  PullFeed(uid, start))
+          }
         }
       } ~
-      get {
-        ctx => handle[DataStoreActor](ctx, Fetch(id))
-      } ~
-      put { // update a post(feed)
-        entity(as[Array[Byte]]) { value =>
-          ctx => handle[DataStoreActor](ctx, Update(id, value))
+      path("feed" / "me") {
+        authenticate(tokenAuthenticator) { uid =>
+          ctx => handle[DataStoreActor](ctx,  GetSelfPost(uid))
         }
-      } ~
-      delete { // delete a post(feed)
-        ctx => handle[DataStoreActor](ctx, Delete(id))
       }
     }
+
   }
 }
