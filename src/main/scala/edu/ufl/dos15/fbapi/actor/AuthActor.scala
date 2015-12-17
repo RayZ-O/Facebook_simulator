@@ -8,11 +8,10 @@ import edu.ufl.dos15.fbapi.Json4sProtocol
 import edu.ufl.dos15.fbapi.FBMessage._
 import edu.ufl.dos15.crypto._
 
-class AuthActor(reqctx: RequestContext, message: Message) extends Actor
+class AuthActor(reqctx: RequestContext, message: Message, priKey: Array[Byte]) extends Actor
     with ActorLogging with Json4sProtocol with RequestHandler {
   val db = context.actorSelection("/user/auth-db")
   val ctx = reqctx
-  val priKey: Array[Byte] = new Array[Byte](1024)
 
   message match {
     case RegisterCred(c, pub) =>

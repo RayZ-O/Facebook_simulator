@@ -55,7 +55,8 @@ object FeedService {
   }
 }
 
-trait FeedService extends HttpService with RequestActorFactory with Json4sProtocol with Authenticator {
+trait FeedService extends HttpService with RequestActorFactory with Json4sProtocol
+    with Authenticator {
   import FeedService._
   import FBMessage._
 

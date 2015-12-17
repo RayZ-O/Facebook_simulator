@@ -6,6 +6,7 @@ import spray.http.StatusCodes._
 import scala.concurrent.duration._
 import akka.actor.{ActorSystem, Props}
 import edu.ufl.dos15.db._
+import edu.ufl.dos15.crypto.Crypto._
 
 class UserServiceSpec extends Specification with Specs2RouteTest with UserService with Before {
   import UserService._
@@ -15,6 +16,9 @@ class UserServiceSpec extends Specification with Specs2RouteTest with UserServic
   implicit val routeTestTimeout = RouteTestTimeout(FiniteDuration(5, SECONDS))
 
   def actorRefFactory = system
+  override val keyPair = RSA.generateKeyPair()
+
+  val clienKeyPair = RSA.generateKeyPair()
 
   def before() = {
     val db = system.actorOf(Props[EncryptedDataDB], "db")
@@ -75,15 +79,6 @@ class UserServiceSpec extends Specification with Specs2RouteTest with UserServic
         val user = responseAs[User]
         user.email.getOrElse("") === "rayzhang1011@gmail.com"
         user.gender.getOrElse("") === "male"
-      }
-    }
-
-    "return id for POST requests to /user/{id}/feed" in {
-      Post("/user/1/feed", Feed(message=Some("I am happy today"))) ~> userRoute ~> check {
-        response.status should be equalTo Created
-        response.entity should not be equalTo(None)
-        val reply = responseAs[HttpIdReply]
-        reply.id.equals("") should be equalTo(false)
       }
     }
 

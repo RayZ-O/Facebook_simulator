@@ -1,5 +1,7 @@
 package edu.ufl.dos15.fbapi
 
+import java.util.Base64
+import java.security.KeyPair
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import akka.util.Timeout
@@ -8,22 +10,22 @@ import spray.routing.authentication.ContextAuthenticator
 import spray.routing.{Rejection, AuthenticationFailedRejection, HttpService}
 import spray.routing.AuthenticationFailedRejection._
 import edu.ufl.dos15.crypto.Crypto._
-import java.security.PrivateKey
 
-trait Authenticator {
+trait Authenticator  {
   this: HttpService =>
-  def priKey: PrivateKey
+  import FBMessage._
   case object AuthorizationTimeoutRejection extends Rejection
 
-  import FBMessage._
+  val keyPair: KeyPair
+
   implicit def executionContext = actorRefFactory.dispatcher
   val tokenAuthenticator: ContextAuthenticator[String] = { ctx =>
      ctx.request.headers.find(_.name == "ACCESS-TOKEN").map(_.value) match {
        case Some(encrypted) =>
          val authDB = actorRefFactory.actorSelection("/user/auth-db")
+         val token = RSA.decrypt(encrypted.getBytes(), keyPair.getPrivate())
          implicit val timeout = Timeout(2.seconds)
-         val token = RSA.decrypt(encrypted, priKey)
-         val f = authDB ? TokenAuth(token)
+         val f = authDB ? TokenAuth(new String(token))
          f.map {
            case reply: DBStrReply =>
              reply.content match {

@@ -26,6 +26,7 @@ libraryDependencies ++= Seq(
     "com.typesafe" % "config" % "1.3.0",
     "org.scalatest" %% "scalatest" % "2.2.4" % "test",
     "com.roundeights" %% "hasher" % "1.2.0",
+    "org.mindrot" % "jbcrypt" % "0.3m",
     "io.spray" %% "spray-can" % vspray,
     "io.spray" %% "spray-caching" % vspray,
     "io.spray" %% "spray-routing" % vspray,

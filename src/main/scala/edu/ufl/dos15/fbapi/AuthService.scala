@@ -3,19 +3,17 @@ package edu.ufl.dos15.fbapi
 import spray.routing.{HttpService, RequestContext, Route}
 import edu.ufl.dos15.fbapi.actor._
 
-trait AuthService extends HttpService with RequestActorFactory with Json4sProtocol {
+trait AuthService extends HttpService with RequestActorFactory with Json4sProtocol with Authenticator {
   import FBMessage._
 
   val authRoute: Route = {
     (path("register") & post) {
       entity(as[RegisterCred]) { reg =>
-        ctx => handle[AuthActor](ctx, reg)
+        ctx => handle[AuthActor](ctx, reg, Some(keyPair.getPrivate().getEncoded))
       }
     } ~
-    (path("login") & get) {
-      parameter('id) { id =>
-        ctx => handle[AuthActor](ctx, GetNonce(id))
-      }
+    (path("login" / Segment) & get) { id =>
+      ctx => handle[AuthActor](ctx, GetNonce(id))
     }
     (path("login" / "password") & post) {
       entity(as[PassWdAuth]) { cred =>

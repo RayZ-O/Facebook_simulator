@@ -6,6 +6,7 @@ import spray.http.StatusCodes._
 import scala.concurrent.duration._
 import akka.actor.{ActorSystem, Props}
 import edu.ufl.dos15.db._
+import edu.ufl.dos15.crypto.Crypto._
 
 class FriendListServiceSpec extends Specification with Specs2RouteTest with FriendListService with Before {
   import FriendListService._
@@ -14,6 +15,9 @@ class FriendListServiceSpec extends Specification with Specs2RouteTest with Frie
   implicit val routeTestTimeout = RouteTestTimeout(FiniteDuration(5, SECONDS))
 
   def actorRefFactory = system
+  override val keyPair = RSA.generateKeyPair()
+
+  val clienKeyPair = RSA.generateKeyPair()
 
   def before() = {
     val db = system.actorOf(Props[EncryptedDataDB], "db")
