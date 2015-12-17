@@ -7,8 +7,12 @@ object FBMessage {
   case class EncryptedData(data: Array[Byte],
                            iv: Array[Byte],
                            keys: HashMap[String, Array[Byte]]) extends Message
+  case class UpdatedData(id: String,
+                         data: Array[Byte],
+                         iv: Array[Byte]) extends Message
   case class PostData(id: String, ed: EncryptedData, pType: String) extends Message
   case class GetKey(ownerId: String, objId: String, pType: String) extends Message
+  case class GetFriendList(ownerId: String) extends Message
   case class PullFeed(id: String, start: Int) extends Message
   case class GetSelfPost(id: String) extends Message
   case class PutList(id: String, ids: String) extends Message

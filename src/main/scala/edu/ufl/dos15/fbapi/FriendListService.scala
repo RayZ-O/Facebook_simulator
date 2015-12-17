@@ -53,6 +53,11 @@ trait FriendListService extends HttpService with Json4sProtocol with RequestActo
           }
         }
     } ~
+    (path("friend" / "me") & get) {  // creates a friend list
+        authenticate(tokenAuthenticator) { uid =>
+          ctx => handle[FriendListActor](ctx, GetFriendList(uid))
+        }
+    } ~
     pathPrefix("friends" / Segment) { objId => // gets infomation about a friend list
       authenticate(tokenAuthenticator) { uid =>
         get {
@@ -67,8 +72,8 @@ trait FriendListService extends HttpService with Json4sProtocol with RequestActo
           parameter('ids) { ids =>
             ctx => handle[FriendListActor](ctx, PutList(objId, ids))
           } ~
-          entity(as[Array[Byte]]) { value =>
-            ctx => handle[DataStoreActor](ctx, Update(objId, value))
+          entity(as[UpdatedData]) { ud =>
+            ctx => handle[DataStoreActor](ctx, ud)
           }
         } ~
         delete { // delete a friend list

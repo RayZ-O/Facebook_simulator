@@ -16,7 +16,7 @@ case class AESCred(iv: Array[Byte], ekey: Array[Byte])
 
 class DataStoreActor(reqctx: RequestContext, message: Message, key: Array[Byte]) extends Actor
     with ActorLogging with Json4sProtocol with RequestHandler {
-  val db = context.actorSelection("/user/db")
+  val db = context.actorSelection("/user/data-db")
   val ctx = reqctx
   var oid = ""
   var cred: AESCred = _
@@ -31,9 +31,9 @@ class DataStoreActor(reqctx: RequestContext, message: Message, key: Array[Byte])
       context.become(timeoutBehaviour orElse waitingInsert)
       sendToDB(InsertBytes(ed.data))
 
-    case u: Update =>
+    case u: UpdatedData =>
       context.become(timeoutBehaviour orElse waitingUpdate)
-      sendToDB(u)
+      sendToDB(Update(u.id, u.data))
 
     case d: Delete =>
       context.become(timeoutBehaviour orElse waitingDelete)
@@ -95,6 +95,18 @@ class DataStoreActor(reqctx: RequestContext, message: Message, key: Array[Byte])
   }
 
   def waitingUpdate: Receive = {
+    case DBSuccessReply(succ) =>
+      succ match {
+        case true =>
+          context.become(waitingUpdateIv)
+          val pubSubDB = context.actorSelection("pub-sub-db")
+          val ud = message.asInstanceOf[UpdatedData]
+          pubSubDB ! Update(ud.id, ud.iv)
+        case false => complete(StatusCodes.NotFound, Error("update error"))
+      }
+  }
+
+  def waitingUpdateIv: Receive = {
     case DBSuccessReply(succ) =>
       succ match {
         case true => complete(StatusCodes.OK, HttpSuccessReply(succ))

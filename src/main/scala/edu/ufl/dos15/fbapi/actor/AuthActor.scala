@@ -12,20 +12,14 @@ class AuthActor(reqctx: RequestContext, message: Message) extends Actor
     with ActorLogging with Json4sProtocol with RequestHandler {
   val db = context.actorSelection("/user/auth-db")
   val ctx = reqctx
-  val namePattern = "^[a-z0-9_-]{3,15}$".r
   val priKey: Array[Byte] = new Array[Byte](1024)
 
   message match {
     case RegisterCred(c, pub) =>
       val cred = new String(Crypto.RSA.decrypt(c, priKey))
       val parts = cred.split("\\|")
-      parts(0) match {
-        case namePattern() =>
-          context.become(timeoutBehaviour orElse waitingRegister)
-          sendToDB(Register(parts(0), repeatedHash(5, parts(1)), pub))
-        case _ =>
-          complete(StatusCodes.BadRequest, Error("illegal username"))
-      }
+      context.become(timeoutBehaviour orElse waitingRegister)
+      sendToDB(Register(parts(0), repeatedHash(5, parts(1)), pub))
 
     case gn: GetNonce =>
       context.become(timeoutBehaviour orElse waitingNonce)

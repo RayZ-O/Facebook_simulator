@@ -16,6 +16,10 @@ class FriendListActor(reqctx: RequestContext, message: Message, key: Array[Byte]
        context.become(timeoutBehaviour orElse waitingFetch)
        sendToDB(f)
 
+    case g: GetFriendList =>
+      context.become(timeoutBehaviour orElse waitingFetch)
+      sendToDB(g)
+
     case PostData(id, ed, pt) =>
       val dataDB = context.actorSelection("/user/data-db")
       context.become(timeoutBehaviour orElse waitingInsertData)

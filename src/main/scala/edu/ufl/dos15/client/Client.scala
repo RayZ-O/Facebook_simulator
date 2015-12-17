@@ -16,6 +16,7 @@ import org.json4s.native.Serialization
 import com.roundeights.hasher.Implicits._
 import edu.ufl.dos15.fbapi.Json4sProtocol
 import edu.ufl.dos15.crypto.Crypto._
+import scala.concurrent.Await
 
 class Client(id: String, host: String, port: Int, page: Boolean) extends Actor
     with ActorLogging with Json4sProtocol {
@@ -33,40 +34,46 @@ class Client(id: String, host: String, port: Int, page: Boolean) extends Actor
   import edu.ufl.dos15.fbapi.FBMessage.HttpListReply
   import edu.ufl.dos15.fbapi.FBMessage.HttpDataReply
   import edu.ufl.dos15.fbapi.FBMessage.EncryptedData
+  import edu.ufl.dos15.fbapi.FBMessage.RegisterCred
+  import edu.ufl.dos15.fbapi.FBMessage.CheckNonce
+  import edu.ufl.dos15.fbapi.FBMessage.UpdatedData
   import edu.ufl.dos15.fbapi.FBMessage.Tick
 
-  val userUri = s"http://$host:$port/user"
-  val pageUri = s"http://$host:$port/page"
-  val feedUri = s"http://$host:$port/feed"
-  val friendUri = s"http://$host:$port/friends"
+
+  val baseUri = s"http://$host:$port"
+  val userUri = baseUri + "/user"
+  val pageUri = baseUri + "/page"
+  val feedUri = baseUri + "/feed"
+  val friendUri = baseUri + "/friends"
   val edgeBaseUri = if (page == true) s"http://$host:$port/page/$id"
                 else s"http://$host:$port/user/$id"
 
   private val kp = RSA.generateKeyPair()
   val pubKey = kp.getPublic()
   private val priKey = kp.getPrivate()
+  val serverPubKey = RSA.generateKeyPair().getPublic//TODO
+  var symKey = AES.generateKey()
   import scala.collection.mutable.HashMap
   var friendsPubKeys = new HashMap[String, PublicKey]
 
   import scala.collection.mutable.ArrayBuffer
-  var myPost = new ArrayBuffer[String]
-  var myFriends = new ArrayBuffer[String]
-  var myFriendListId = ""
+  var token = ""
+  var myPost: List[String] = _
+  var myFriends: List[String] = _
+  var myFriendListIds: List[String] = _
   var tick: Cancellable = _
-
-  val pipeline = sendReceive
 
   def receive: Receive = {
     case Run(ids) =>
-      val f = createFriends()
-      ids foreach {friendId => if (friendId != id) myFriends += friendId }
-      f onComplete {
-      case Success(rep) =>
-        myFriendListId = rep.id
-        updateFriends()
-      case Failure(error) =>
-        log.error(error, "Couldn't post friend")
-    }
+//      val f = createFriends()
+//      ids foreach {friendId => if (friendId != id) myFriends += friendId }
+//      f onComplete {
+//      case Success(rep) =>
+//        myFriendListId = rep.id
+//        updateFriends()
+//      case Failure(error) =>
+//        log.error(error, "Couldn't post friend")
+//    }
       tick = context.system.scheduler.schedule(1.second, 1.second, self, Tick)
 
     case Tick => takeAction()
@@ -77,7 +84,7 @@ class Client(id: String, host: String, port: Int, page: Boolean) extends Actor
   def takeAction() = {
     val n = Random.nextInt(100)
     if (n < 30 ) {
-      readNewFeeds()
+      getNewFeeds()
     } else if (n < 60) {
       createFeed()
     } else if (n < 80) {
@@ -91,10 +98,63 @@ class Client(id: String, host: String, port: Int, page: Boolean) extends Actor
     }
   }
 
-  def encyptData(data: String, symKey: SecretKey, iv: IvParameterSpec) = {
+  def register(): Future[Option[String]] = {
+    val name = randomString(20)
+    val passwd = randomString(12).bcrypt.hex
+    val encrypted = RSA.encrypt(name + "|" + passwd, serverPubKey)
+    val reg = RegisterCred(encrypted, pubKey.getEncoded())
+    val pipeline = sendReceive ~> unmarshal[HttpIdReply]
+    val responseFuture = pipeline( Post(baseUri + "/register", reg) )
+    responseFuture.map {
+      case HttpIdReply(id) => Some(id)
+    }.recover {
+      case _ => None
+    }
+  }
+
+  def getNonce(): Future[Option[String]] = {
+    val pipeline = sendReceive ~> unmarshal[HttpDataReply]
+    val responseFuture = pipeline( Get(baseUri + "/login") )
+    responseFuture.map {
+      case HttpDataReply(data, _, _) => Some(new String(RSA.decrypt(data, priKey)))
+    }.recover {
+      case _ => None
+    }
+  }
+
+  def login(): Option[String] = {
+    Await.ready(getNonce(), Duration.Inf).value.get match {
+      case Success(n) =>
+        n match {
+          case Some(nonce) => login(nonce)
+          case None =>
+            log.info("Get nonce failed")
+            None
+        }
+      case Failure(e) =>
+        log.info(e.toString() + "Get nonce failed")
+        None
+    }
+  }
+
+  def login(nonce: String): Option[String] = {
+    val pipeline = sendReceive ~> unmarshal[HttpDataReply]
+    val sign = RSA.sign(nonce, priKey)
+    val cn = CheckNonce(nonce, sign)
+    val responseFuture = pipeline( Post(baseUri + "/login/pubkey", cn))
+    Await.ready(responseFuture, Duration.Inf).value.get match {
+      case Success(dr) => Some(new String(RSA.decrypt(dr.data, priKey)))
+      case Failure(e) =>
+        log.info(e.toString() + "Login failed")
+        None
+    }
+  }
+
+  def encyptData(data: String) = {
     val digest = data.sha256
     val signature = RSA.sign(digest.bytes, priKey)
     val dataWithSign = data + "|" +  new String(Base64.getEncoder().encodeToString(signature))
+    val iv = AES.generateIv()
     val encyptData = AES.encrypt(dataWithSign, symKey, iv)
     val keyBytes = symKey.getEncoded()
     val keys = friendsPubKeys.map{ p => (p._1 -> RSA.encrypt(keyBytes, p._2)) }
@@ -128,10 +188,11 @@ class Client(id: String, host: String, port: Int, page: Boolean) extends Actor
     }
   }
 
-  def getData(req: HttpRequest, errMsg: String) = {
-    val pipeline = sendReceive ~> unmarshal[HttpDataReply]
+  def getData(nodeId: String, req: HttpRequest, errMsg: String) = {
+    val pipeline = addHeader("ACCESS-TOKEN", token) ~>
+                   sendReceive ~>
+                   unmarshal[HttpDataReply]
     val responseFuture = pipeline(req)
-    val nodeId = req.uri.query.get("id")
     val params = req.uri.query.get("fields")
     responseFuture onComplete {
       case Success(ed) =>
@@ -139,66 +200,85 @@ class Client(id: String, host: String, port: Int, page: Boolean) extends Actor
           val res = decyptData(ed.data, ed.iv.get, ed.key.get)
           res._1 match {
             case true =>
-              val json = filterFields(nodeId.get, params, res._2)
+              val json = filterFields(nodeId, params, res._2)
               val jsonStr = compact(render(json))
               println(jsonStr)
-            case false => log.error(res._2)
+            case false => log.info(res._2)
           }
         } catch {
-          case error: Throwable => log.error(error, "Decrypt failed")
+          case error: Throwable => log.info(error.toString() + "Decrypt failed")
         }
       case Failure(error) =>
-        log.error(error, errMsg)
+        log.info(error.toString() + errMsg)
+    }
+  }
+
+  def postData(req: HttpRequest, errMsg: String) = {
+    val pipeline = addHeader("ACCESS-TOKEN", token) ~>
+                   sendReceive ~>
+                   unmarshal[HttpIdReply]
+    val responseFuture = pipeline(req)
+    responseFuture onComplete {
+      case Success(ir) =>
+        val newObjId = ir.id
+      case Failure(error) =>
+        log.info(error.toString() + errMsg)
+    }
+  }
+
+  def updateData(putObj: AnyRef, nodeId: String, uri: String, errMsg: String) = {
+    val getPipeline = addHeader("ACCESS-TOKEN", token) ~>
+                      sendReceive ~>
+                      unmarshal[HttpDataReply]
+    val responseFuture = getPipeline(Get(uri + "/" + nodeId))
+    responseFuture onComplete {
+      case Success(ed) =>
+        try {
+          val res = decyptData(ed.data, ed.iv.get, ed.key.get)
+          res._1 match {
+            case true =>
+              val json = parse(res._2)
+              val value = Extraction.decompose(putObj)
+              val updated = compact(render(json merge value))
+              val iv = AES.generateIv()
+              val encrypted = AES.encrypt(updated, ed.key.get, iv)
+              val ud = UpdatedData(nodeId, encrypted, iv.getIV)
+              val putPipeline = addHeader("ACCESS-TOKEN", token) ~> sendReceive
+              putPipeline(Put(uri + "/" + nodeId, ud))
+            case false => log.info(res._2)
+          }
+        } catch {
+          case error: Throwable => log.info(error.toString() + "Decrypt failed")
+        }
+      case Failure(error) =>
+        log.info(error.toString() + errMsg)
     }
   }
 
   def readFriendProfile() = {
-    val f = getFriends(myFriendListId)
-    f onComplete {
-      case Success(friends) =>
-        friends.data.getOrElse(List()) foreach { friendId => getUser(friendId) }
-      case Failure(error) =>
-        log.error(error, "Couldn't read friend profile")
-    }
-  }
-
-  def readNewFeeds() = {
-    val f = getNewFeeds()
-    f onComplete {
-      case Success(feeds) =>
-        feeds.list foreach { feedId => getFeed(feedId) }
-      case Failure(error) =>
-        log.error(error, "Couldn't read new feeds")
+    if (!myFriends.isEmpty) {
+      val idx = Random.nextInt(myFriends.length)
+      getUser(myFriends(idx))
     }
   }
 
   def getUser(userId: String) = {
-    val responseFuture = pipeline { Get(userUri + "/" + userId) }
-    responseHandler(responseFuture,
-                    s"Get user $userId failed",
-                    s"Couldn't get user $userId")
+    getData(userId,  Get(userUri + "/" + userId), s"Couldn't get user $userId")
   }
 
   def updateUser() = {
     val user = generateUpdate("user")
-    val responseFuture = pipeline { Put(userUri + "/" + id, user) }
-    responseHandler(responseFuture,
-                    s"Update user $id failed",
-                    s"Couldn't put user $id ")
+    updateData(user, id, userUri, s"Couldn't put user $id")
   }
 
   def deleteUser() = {
+    val pipeline = addHeader("ACCESS-TOKEN", token) ~> sendReceive
     val responseFuture = pipeline { Delete(userUri + "/" + id) }
-    stopHandler(responseFuture,
-                s"Delete user $id failed",
-                s"Couldn't delete user $id")
+    stopHandler(responseFuture, s"Delete user $id failed")
   }
 
   def getPage(pageId: String) = {
-    val responseFuture = pipeline { Get(pageUri + "/" + pageId) }
-    responseHandler(responseFuture,
-                    s"Get page $pageId failed",
-                    s"Couldn't get page $pageId")
+    getData(pageId,  Get(pageUri + "/" + pageId), s"Couldn't get page $pageId")
   }
 
   def createPage() = {
@@ -215,119 +295,145 @@ class Client(id: String, host: String, port: Int, page: Boolean) extends Actor
 
   def updatePage() = {
     val page = generateUpdate("page")
-    val responseFuture = pipeline { Put(pageUri + "/" + id, page) }
-    responseHandler(responseFuture,
-                    s"Update page $id failed",
-                    s"Couldn't put page $id")
+    updateData(page, id, pageUri, s"Couldn't put page $id")
   }
 
   def deletePage() = {
+    val pipeline = addHeader("ACCESS-TOKEN", token) ~> sendReceive
     val responseFuture = pipeline { Delete(pageUri + "/" + id) }
-    stopHandler(responseFuture,
-                s"Delete page $id failed",
-                s"Couldn't delete page $id")
+    stopHandler(responseFuture, s"Delete page $id failed")
   }
 
   def getNewFeeds() = {
-    val pipeline = sendReceive ~> unmarshal[HttpListReply]
-    pipeline { Get(feedUri + "/" + "new") }
+    val pipeline = addHeader("ACCESS-TOKEN", token) ~>
+                   sendReceive ~>
+                   unmarshal[HttpListReply]
+    val responseFuture = pipeline { Get(feedUri + "/pull") }
+    responseFuture onComplete {
+      case Success(lr) =>
+        lr.list foreach {id => getFeed(id) }
+      case Failure(error) =>
+        log.info(error.toString(), "Couldn't delete feed")
+    }
+  }
+
+  def getMyFeeds() = {
+    val pipeline = addHeader("ACCESS-TOKEN", token) ~>
+                   sendReceive ~>
+                   unmarshal[HttpListReply]
+    val responseFuture = pipeline { Get(feedUri + "/me") }
+    responseFuture onComplete {
+      case Success(lr) =>
+        myPost = lr.list
+      case Failure(error) =>
+        log.info(error.toString(), "Couldn't delete feed")
+    }
   }
 
   def getFeed(feedId: String) = {
-    val responseFuture = pipeline { Get(feedUri + "/" + feedId) }
-    responseHandler(responseFuture,
-                s"Get feed failed",
-                s"Couldn't get feed")
+    getData(feedId,  Get(feedUri + "/" + feedId), s"Couldn't get page $feedId")
   }
 
   def createFeed() = {
-    val pipeline = sendReceive ~> unmarshal[HttpIdReply]
     val feed = generateCreate("feed")
-    val responseFuture = pipeline { Post(edgeBaseUri + "/" + "feed", feed) }
-    responseFuture onComplete {
-      case Success(rep) =>
-        myPost += rep.id
-      case Failure(error) =>
-        log.error(error, "Couldn't get new feed")
-    }
+    val jsonStr = Serialization.write(feed)
+    val encrypted = encyptData(jsonStr)
+    postData(Post(feedUri, encrypted), "Post feed failed")
   }
 
   def updateFeed() = {
     if (myPost.length > 0) {
       val feedId = myPost(Random.nextInt(myPost.length))
       val feed = generateUpdate("feed")
-      val responseFuture = pipeline { Put(feedUri + "/" + feedId, feed) }
-      responseHandler(responseFuture,
-                  s"Update feed failed",
-                  s"Couldn't put feed")
-     }
+      updateData(feed, feedId, feedUri, s"Couldn't put feed $feedId")
+    }
   }
 
   def deleteFeed() = {
     if (myPost.length > 0) {
       val feedId = myPost(Random.nextInt(myPost.length))
-      val pipeline = sendReceive ~> unmarshal[HttpSuccessReply]
+      val pipeline = addHeader("ACCESS-TOKEN", token) ~> sendReceive
       val responseFuture = pipeline { Delete(feedUri + "/" + feedId) }
-      responseFuture onComplete {
-        case Success(res) =>
-          myPost -= feedId
-        case Failure(error) =>
-          log.error(error, "Couldn't delete feed")
-      }
+      responseHandler(responseFuture, "Couldn't delete feed")
     }
   }
 
   def getFriends(friendListId: String) = {
-    val pipeline = sendReceive ~> unmarshal[FriendList]
-    pipeline { Get(friendUri + "/" + friendListId) }
+    val pipeline = addHeader("ACCESS-TOKEN", token) ~>
+                   sendReceive ~>
+                   unmarshal[HttpListReply]
+    val responseFuture = pipeline { Get(friendUri + "/" + friendListId + "/list") }
+    responseFuture onComplete {
+      case Success(lr) =>
+        myFriends = lr.list
+      case Failure(error) =>
+        log.info(error.toString() +  "Couldn't get friend list")
+    }
+  }
+
+  def getMyFriendLists = {
+    val pipeline = addHeader("ACCESS-TOKEN", token) ~>
+                   sendReceive ~>
+                   unmarshal[HttpListReply]
+    val responseFuture = pipeline { Get(friendUri + "/me") }
+    responseFuture onComplete {
+      case Success(lr) =>
+        myFriendListIds = lr.list
+      case Failure(error) =>
+        log.info(error.toString() +  "Couldn't get friend list")
+    }
+  }
+
+  def getFriendListInfo(friendListId: String) = {
+    getData(friendListId,  Get(friendUri + "/" + friendListId + "/info"), s"Couldn't get page $friendListId")
   }
 
   def createFriends() = {
     val friends = generateCreate("friends")
-    val pipeline = sendReceive ~> unmarshal[HttpIdReply]
-    pipeline { Post(edgeBaseUri + "/" + "friends", friends) }
+    val jsonStr = Serialization.write(friends)
+    val encrypted = encyptData(jsonStr)
+    postData(Post(friendUri, encrypted), "Post friend list failed")
   }
 
   def updateFriends() = {
-    if (!myFriends.isEmpty) {
+    if (!myFriends.isEmpty && !myFriendListIds.isEmpty) {
       val ids = myFriends.reduceLeft(_+","+_)
-      val responseFuture = pipeline { Put(friendUri + "/" + myFriendListId + "?ids=" + ids) }
-      responseHandler(responseFuture,
-                      s"Put friends to friend list $myFriendListId failed",
-                      s"Couldn't put friends to friend list $myFriendListId")
+      val pipeline = addHeader("ACCESS-TOKEN", token) ~> sendReceive
+      val responseFuture = pipeline { Put(friendUri + "/" + myFriendListIds(0) + "?ids=" + ids) }
+      responseHandler(responseFuture, s"Put friends to friend list ${myFriendListIds(0)} failed")
     }
   }
 
   def deleteFriends() = {
-    val responseFuture = pipeline { Delete( friendUri + "/" + myFriendListId) }
-    responseHandler(responseFuture,
-                    s"Delete friend list $myFriendListId failed",
-                    s"Couldn't delete friend list $myFriendListId")
-  }
-
-  def responseHandler(f: Future[HttpResponse], errMsg1: String, errMsg2: String) = {
-    f onComplete {
-      case Success(res) =>
-        if (res.status != StatusCodes.OK) {
-          log.error(errMsg1)
-        } else {
-          println(res)
-        }
-      case Failure(error) =>
-        log.error(error, errMsg2)
+    if (!myFriends.isEmpty) {
+      val ids = myFriends.slice(0,2).reduceLeft(_+","+_)
+      val pipeline = addHeader("ACCESS-TOKEN", token) ~> sendReceive
+      val responseFuture = pipeline { Delete(friendUri + "/" + myFriendListIds(0) + "?ids=" + ids) }
+      responseHandler(responseFuture, s"Delete friends to friend list ${myFriendListIds(0)} failed")
     }
   }
 
-  def stopHandler(f: Future[HttpResponse], errMsg1: String, errMsg2: String) = {
+  def deleteFriendList() = {
+    val pipeline = addHeader("ACCESS-TOKEN", token) ~> sendReceive
+    val responseFuture = pipeline { Delete( friendUri + "/" + myFriendListIds(0)) }
+    responseHandler(responseFuture, s"Delete friend list ${myFriendListIds(0)} failed")
+  }
+
+  def responseHandler(f: Future[HttpResponse], errMsg: String) = {
     f onComplete {
       case Success(res) =>
-        if (res.status == StatusCodes.OK) {
-          context.stop(self)
-        } else {
-          log.error(errMsg1)
-        }
+        println(res)
       case Failure(error) =>
-        log.error(error, errMsg2)
+        log.info(error.toString() + errMsg)
+    }
+  }
+
+  def stopHandler(f: Future[HttpResponse], errMsg: String) = {
+    f onComplete {
+      case Success(res) =>
+        context.stop(self)
+      case Failure(error) =>
+        log.error(error.toString() + errMsg)
     }
   }
 

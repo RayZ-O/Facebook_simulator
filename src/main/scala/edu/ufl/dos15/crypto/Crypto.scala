@@ -53,6 +53,10 @@ object Crypto {
       new SecretKeySpec(Base64.getDecoder().decode(bytes), "AES")
     }
 
+    def encrypt(str: String, secKey: Array[Byte], iv: IvParameterSpec): Array[Byte] = {
+      encrypt(str.getBytes("UTF-8"), decodeKey(secKey), iv)
+    }
+
     def encrypt(str: String, secKey: SecretKey, iv: IvParameterSpec): Array[Byte] = {
       encrypt(str.getBytes("UTF-8"), secKey, iv)
     }

@@ -19,6 +19,12 @@ class FriendDB extends Actor with ActorLogging {
         case None => sender ! DBListReply(false)
       }
 
+    case GetFriendList(id) =>
+      ownerToList.get(id) match {
+        case Some(lb) => sender ! DBListReply(true, Some(lb.toList))
+        case None => sender ! DBListReply(false)
+      }
+
     case FindCommon(id1, id2) =>
       if (friendDB.contains(id1) && friendDB.contains(id2)) {
         val common = friendDB(id1) & friendDB(id2)

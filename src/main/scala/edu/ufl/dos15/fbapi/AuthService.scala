@@ -27,6 +27,5 @@ trait AuthService extends HttpService with RequestActorFactory with Json4sProtoc
         ctx => handle[AuthActor](ctx, cn)
       }
     }
-
   }
 }

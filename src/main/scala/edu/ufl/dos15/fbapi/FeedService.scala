@@ -78,8 +78,8 @@ trait FeedService extends HttpService with RequestActorFactory with Json4sProtoc
           ctx => handle[DataStoreActor](ctx, GetKey(uid, objId, "feed"))
         } ~
         put { // update a post(feed)
-          entity(as[Array[Byte]]) { value =>
-            ctx => handle[DataStoreActor](ctx, Update(objId, value))
+          entity(as[UpdatedData]) { ud =>
+            ctx => handle[DataStoreActor](ctx, ud)
           }
         } ~
         delete { // delete a post(feed)

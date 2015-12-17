@@ -39,6 +39,10 @@ class PubSubDB extends Actor with ActorLogging {
         sender ! DBCredReply(false)
       }
 
+    case Update(id, iv) =>
+      ivDB += id -> iv
+      sender ! DBSuccessReply(true)
+
     case PullFeed(id, start) =>
       feedChans.get(id) match {
         case Some(m) =>
