@@ -45,6 +45,7 @@ object FBMessage {
                          ivs: Option[Map[String, Array[Byte]]] = None,
                          keys: Option[Map[String, Array[Byte]]] = None) extends Message
   case class DBTestInsert(id: String, value: Array[Byte]) extends Message
+  case class DBTestToken(id: String, token: String) extends Message
   // common
   case class FindCommon(id1: String, id2: String) extends Message
   case class Delete(objId: String, ownerId: Option[String] = None) extends Message

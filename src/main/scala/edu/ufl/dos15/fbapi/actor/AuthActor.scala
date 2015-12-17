@@ -10,7 +10,7 @@ import edu.ufl.dos15.crypto._
 
 class AuthActor(reqctx: RequestContext, message: Message) extends Actor
     with ActorLogging with Json4sProtocol with RequestHandler {
-  val db = context.actorSelection("/user/authdb")
+  val db = context.actorSelection("/user/auth-db")
   val ctx = reqctx
   val namePattern = "^[a-z0-9_-]{3,15}$".r
   val priKey: Array[Byte] = new Array[Byte](1024)
