@@ -45,14 +45,11 @@ class Client(id: String, host: String, port: Int, page: Boolean) extends Actor
   val pageUri = baseUri + "/page"
   val feedUri = baseUri + "/feed"
   val friendUri = baseUri + "/friends"
-  val edgeBaseUri = if (page == true) s"http://$host:$port/page/$id"
-                else s"http://$host:$port/user/$id"
-
+  
   private val kp = RSA.generateKeyPair()
   val pubKey = kp.getPublic()
   private val priKey = kp.getPrivate()
-  val serverPubKey = RSA.generateKeyPair().getPublic//TODO
-  var symKey = AES.generateKey()
+  val serverPubKey = RSA.generateKeyPair().getPublic()//TODO
   import scala.collection.mutable.HashMap
   var friendsPubKeys = new HashMap[String, PublicKey]
 
@@ -155,6 +152,7 @@ class Client(id: String, host: String, port: Int, page: Boolean) extends Actor
     val signature = RSA.sign(digest.bytes, priKey)
     val dataWithSign = data + "|" +  new String(Base64.getEncoder().encodeToString(signature))
     val iv = AES.generateIv()
+    val symKey = AES.generateKey()
     val encyptData = AES.encrypt(dataWithSign, symKey, iv)
     val keyBytes = symKey.getEncoded()
     val keys = friendsPubKeys.map{ p => (p._1 -> RSA.encrypt(keyBytes, p._2)) }

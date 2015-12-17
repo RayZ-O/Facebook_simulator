@@ -59,6 +59,7 @@ object FBMessage {
   case class CheckNonce(nonce: String, signature: Array[Byte]) extends Message
   case class PassWdAuth(username: String, passwd: String) extends Message
   case class TokenAuth(token: String) extends Message
+  case class TokenCred(token: Array[Byte]) extends Message
   case class GetPubKey(id: String) extends Message
 
 }
