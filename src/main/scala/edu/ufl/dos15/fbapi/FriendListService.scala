@@ -72,8 +72,8 @@ trait FriendListService extends HttpService with Json4sProtocol with RequestActo
           parameter('ids) { ids =>
             ctx => handle[FriendListActor](ctx, PutList(objId, ids))
           } ~
-          entity(as[UpdatedData]) { ud =>
-            ctx => handle[DataStoreActor](ctx, ud)
+          entity(as[EncryptedData]) { ed =>
+            ctx => handle[DataStoreActor](ctx, UpdateData(uid, objId, ed, "friend"))
           }
         } ~
         delete { // delete a friend list

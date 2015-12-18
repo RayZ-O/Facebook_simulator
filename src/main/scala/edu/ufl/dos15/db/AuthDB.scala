@@ -63,6 +63,10 @@ class AuthDB extends Actor with ActorLogging {
         case None => sender ! DBStrReply(false)
       }
 
+    case DBTestToken(id, token) =>
+      val expire = System.currentTimeMillis + 3600000L
+      tokenDB += (token -> TokenInfo(id, expire))
+
     case Tick =>
       nonceDB.dropWhile(t => t._2.expireOn < System.currentTimeMillis())
       tokenDB.dropWhile(t => t._2.expireOn < System.currentTimeMillis())

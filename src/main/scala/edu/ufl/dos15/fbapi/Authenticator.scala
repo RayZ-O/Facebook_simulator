@@ -23,17 +23,22 @@ trait Authenticator  {
      ctx.request.headers.find(_.name == "ACCESS-TOKEN").map(_.value) match {
        case Some(encrypted) =>
          val authDB = actorRefFactory.actorSelection("/user/auth-db")
-         val token = RSA.decrypt(Base64.getDecoder().decode(encrypted), keyPair.getPrivate())
-         implicit val timeout = Timeout(2.seconds)
-         val f = authDB ? TokenAuth(new String(token))
-         f.map {
-           case reply: DBStrReply =>
-             reply.content match {
-               case Some(id) => Right(id)
-               case None => Left(AuthenticationFailedRejection(CredentialsRejected, ctx.request.headers))
-             }
-         }.recover {
-           case _ => Left(AuthorizationTimeoutRejection)
+         try {
+           val token = RSA.decrypt(Base64.getDecoder().decode(encrypted), keyPair.getPrivate())
+           implicit val timeout = Timeout(2.seconds)
+           val f = authDB ? TokenAuth(new String(token))
+           f.map {
+             case reply: DBStrReply =>
+               reply.content match {
+                 case Some(id) => Right(id)
+                 case None => Left(AuthenticationFailedRejection(CredentialsRejected, ctx.request.headers))
+               }
+           }.recover {
+             case _ => Left(AuthorizationTimeoutRejection)
+           }
+         } catch {
+           case _: Throwable =>
+             Future(Left(AuthenticationFailedRejection(CredentialsRejected, ctx.request.headers)))
          }
        case None =>
          Future(Left(AuthenticationFailedRejection(CredentialsMissing, ctx.request.headers)))

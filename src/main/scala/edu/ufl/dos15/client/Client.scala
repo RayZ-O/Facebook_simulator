@@ -36,7 +36,6 @@ class Client(id: String, host: String, port: Int, page: Boolean) extends Actor
   import edu.ufl.dos15.fbapi.FBMessage.EncryptedData
   import edu.ufl.dos15.fbapi.FBMessage.RegisterUser
   import edu.ufl.dos15.fbapi.FBMessage.CheckNonce
-  import edu.ufl.dos15.fbapi.FBMessage.UpdatedData
   import edu.ufl.dos15.fbapi.FBMessage.Tick
 
 
@@ -169,30 +168,17 @@ class Client(id: String, host: String, port: Int, page: Boolean) extends Actor
   }
 
   def encyptData(data: String) = {
-    val digest = data.sha256
-    val signature = RSA.sign(digest.bytes, priKey)
-    val dataWithSign = data + "|" +  new String(Base64.getEncoder().encodeToString(signature))
     val iv = AES.generateIv()
     val symKey = AES.generateKey()
-    val encryptData = AES.encrypt(dataWithSign, symKey, iv)
+    val encryptData = signedEncryptAES(data, priKey, symKey, iv, pubKey)
     val keyBytes = symKey.getEncoded()
     val keys = friendsPubKeys.map{ p => (p._1 -> RSA.encrypt(keyBytes, p._2)) }
     keys += id -> RSA.encrypt(keyBytes, pubKey)
-    EncryptedData(encryptData, iv.getIV(), keys)
+    EncryptedData(encryptData, iv.getIV(), keys.toMap)
   }
 
   def decyptData(encryptedData: Array[Byte], encryptedKey: Array[Byte], iv: Array[Byte]) = {
-    val secKey = AES.decodeKey(RSA.decrypt(encryptedKey, priKey))
-    val dataWithSign = new String(AES.decrypt(encryptedData, secKey, new IvParameterSpec(iv)))
-    dataWithSign.split("\\|") match {
-      case Array(data, sign) =>
-        val signature = Base64.getDecoder().decode(sign)
-        RSA.verify(data.sha256.bytes, signature, pubKey) match {
-          case true => (true, data)
-          case false => (false, "Unmatching digital signature")
-        }
-      case _ => (false, "Unrecognized encrypted data")
-    }
+    decryptAESVerify(encryptedData, encryptedKey, priKey, iv)
   }
 
   def filterFields(nodeId: String, params: Option[String], content: String): JsonAST.JValue = {
@@ -260,9 +246,8 @@ class Client(id: String, host: String, port: Int, page: Boolean) extends Actor
               val value = Extraction.decompose(putObj)
               val updated = compact(render(json merge value))
               val encrypted = encyptData(updated)
-              val ud = UpdatedData(nodeId, encrypted)
               val putPipeline = addHeader("ACCESS-TOKEN", eToken) ~> sendReceive
-              putPipeline(Put(uri + "/" + nodeId, ud))
+              putPipeline(Put(uri + "/" + nodeId, encrypted))
             case false => log.info(res._2)
           }
         } catch {

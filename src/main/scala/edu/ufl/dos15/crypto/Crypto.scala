@@ -15,6 +15,7 @@ import java.security.spec.PKCS8EncodedKeySpec
 import java.security.spec.X509EncodedKeySpec
 import java.security.KeyPairGenerator
 import java.security.Signature
+import com.roundeights.hasher.Implicits._
 import com.typesafe.config.ConfigFactory
 import scala.util.Try
 
@@ -36,6 +37,35 @@ object Crypto {
     token.map("%02X".format(_)).mkString
   }
 
+  def signedEncryptAES(data: String, priKey: PrivateKey, secKey: SecretKey, iv: IvParameterSpec,
+      pubKey: PublicKey): Array[Byte] = {
+    val digest = data.sha256
+    val signature = RSA.sign(digest.bytes, priKey)
+    val signStr = new String(Base64.getEncoder().encodeToString(signature))
+    val pubStr = new String(Base64.getEncoder().encodeToString(pubKey.getEncoded()))
+    AES.encrypt(data + "|" +  signStr + "|" + pubStr, secKey, iv)
+  }
+
+  def decryptAESVerify(encryptedData: Array[Byte], encryptedKey: Array[Byte], priKey: PrivateKey,
+      iv: Array[Byte]): (Boolean, String) = {
+//    try {
+      val secKey = AES.decodeKey(RSA.decrypt(encryptedKey, priKey))
+      val dataWithSign = new String(AES.decrypt(encryptedData, secKey, new IvParameterSpec(iv)))
+      dataWithSign.split("\\|") match {
+        case Array(data, sign, pubKey) =>
+          val signature = Base64.getDecoder().decode(sign)
+          val pub = Base64.getDecoder().decode(pubKey)
+          RSA.verify(data.sha256.bytes, signature, pub) match {
+            case true => (true, data)
+            case false => (false, "Unmatching digital signature")
+          }
+        case _ => (false, "Unrecognized encrypted data")
+      }
+//    } catch {
+//      case _: Throwable => (false, "Decrypt failed")
+//    }
+  }
+
   object AES {
     def generateKey(): SecretKey = {
       val keyGen = KeyGenerator.getInstance("AES")
@@ -50,7 +80,7 @@ object Crypto {
     }
 
     def decodeKey(bytes: Array[Byte]): SecretKey = {
-      new SecretKeySpec(Base64.getDecoder().decode(bytes), "AES")
+      new SecretKeySpec(bytes, "AES")
     }
 
     def encrypt(str: String, secKey: Array[Byte], iv: IvParameterSpec): Array[Byte] = {

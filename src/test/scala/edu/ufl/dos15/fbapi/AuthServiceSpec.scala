@@ -28,7 +28,7 @@ class AuthServiceSpec extends Specification with Specs2RouteTest with AuthServic
   var nonce = ""
   var token = ""
 
-  def before() = {
+  override def before() = {
     system.actorOf(Props[AuthDB], "auth-db")
     system.actorOf(Props[EncryptedDataDB], "data-db")
     system.actorOf(Props[PubSubDB], "pub-sub-db")
@@ -42,12 +42,9 @@ class AuthServiceSpec extends Specification with Specs2RouteTest with AuthServic
                      "gender": "male",
                      "first_name": "Rui",
                      "last_name": "Zhang"}"""
-      val digest = data.sha256
-      val signature = RSA.sign(digest.bytes, clienKeyPair.getPrivate())
-      val dataWithSign = data + "|" +  new String(Base64.getEncoder().encodeToString(signature))
       val iv = AES.generateIv()
       val symKey = AES.generateKey()
-      val encrypted = AES.encrypt(dataWithSign, symKey, iv)
+      val encrypted = signedEncryptAES(data, clienKeyPair.getPrivate(), symKey, iv, clienKeyPair.getPublic())
       val ekey = RSA.encrypt(symKey.getEncoded(), clienKeyPair.getPublic().getEncoded())
       val reg = RegisterUser(encrypted, iv.getIV,ekey, clienKeyPair.getPublic().getEncoded())
       Post("/register", reg) ~> authRoute ~> check {

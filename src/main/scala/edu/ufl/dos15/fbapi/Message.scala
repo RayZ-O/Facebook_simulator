@@ -3,11 +3,10 @@ package edu.ufl.dos15.fbapi
 object FBMessage {
   sealed trait Message
   // server message
-  import scala.collection.mutable.HashMap
   case class EncryptedData(data: Array[Byte],
                            iv: Array[Byte],
-                           keys: HashMap[String, Array[Byte]]) extends Message
-  case class UpdatedData(id: String, data: EncryptedData) extends Message
+                           keys: Map[String, Array[Byte]]) extends Message
+  case class UpdateData(ownerId: String, objId: String, ed: EncryptedData, pType: String) extends Message
   case class PostData(id: String, ed: EncryptedData, pType: String) extends Message
   case class GetKey(ownerId: String, objId: String, pType: String) extends Message
   case class GetFriendList(ownerId: String) extends Message
@@ -16,7 +15,7 @@ object FBMessage {
   case class PutList(id: String, ids: String) extends Message
   case class DeleteList(id: String, ids: String) extends Message
   case class Publish(ownerId: String, objId: String, iv: Array[Byte],
-      keys: HashMap[String, Array[Byte]], pType: String) extends Message
+      keys: Map[String, Array[Byte]], pType: String) extends Message
   case class CreateChannel(ownerId: String, iv: Array[Byte], key: Array[Byte]) extends Message
   case class HttpSuccessReply(success: Boolean) extends Message
   case class HttpIdReply(id: String) extends Message

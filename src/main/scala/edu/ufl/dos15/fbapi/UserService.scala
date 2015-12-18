@@ -36,21 +36,14 @@ trait UserService extends HttpService with RequestActorFactory with Json4sProtoc
     (path("user") & get) {
       complete(StatusCodes.OK)
     } ~
-    (path("user") & post) {  // creates a user
-        authenticate(tokenAuthenticator) { uid =>
-          entity(as[EncryptedData]) { ed =>
-            ctx => handle[DataStoreActor](ctx, PostData(uid, ed, "profile"))
-          }
-        }
-      } ~
     pathPrefix("user" / Segment) { objId => // gets infomation about a user
       authenticate(tokenAuthenticator) { uid =>
         get {
           ctx => handle[DataStoreActor](ctx, GetKey(uid, objId, "profile"))
         } ~
         put { // update a user
-          entity(as[UpdatedData]) { ud =>
-            ctx => handle[DataStoreActor](ctx, ud)
+          entity(as[EncryptedData]) { ed =>
+            ctx => handle[DataStoreActor](ctx, UpdateData(uid, objId, ed, "profile"))
           }
         } ~
         delete { // delete a user

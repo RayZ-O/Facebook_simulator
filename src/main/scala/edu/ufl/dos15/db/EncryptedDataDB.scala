@@ -25,8 +25,12 @@ class EncryptedDataDB extends Actor with ActorLogging {
       sender ! DBStrReply(true, Some(id))
 
     case Update(id, newValue) =>
-      db += (id -> newValue)
-      sender ! DBSuccessReply(true)
+      if (db.contains(id)) {
+        db += (id -> newValue)
+        sender ! DBSuccessReply(true)
+      } else {
+        sender ! DBSuccessReply(false)
+      }
 
     case Delete(id, _) =>
       if (db.contains(id)) {
