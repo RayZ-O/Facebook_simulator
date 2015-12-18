@@ -8,25 +8,20 @@ import edu.ufl.dos15.fbapi.Json4sProtocol
 import edu.ufl.dos15.fbapi.FBMessage._
 import edu.ufl.dos15.crypto._
 
-class AuthActor(reqctx: RequestContext, message: Message, priKey: Array[Byte]) extends Actor
+class AuthActor(reqctx: RequestContext, message: Message) extends Actor
     with ActorLogging with Json4sProtocol with RequestHandler {
   val db = context.actorSelection("/user/auth-db")
   val ctx = reqctx
-
+  var userId = ""
+  
   message match {
-    case RegisterCred(c, pub) =>
-      val cred = new String(Crypto.RSA.decrypt(c, priKey))
-      val parts = cred.split("\\|")
+    case RegisterUser(data, iv, key, pub) =>      
       context.become(timeoutBehaviour orElse waitingRegister)
-      sendToDB(Register(parts(0), repeatedHash(5, parts(1)), pub))
+      sendToDB(Register(pub))
 
     case gn: GetNonce =>
       context.become(timeoutBehaviour orElse waitingNonce)
       sendToDB(gn)
-
-    case pwa: PassWdAuth =>
-      context.become(timeoutBehaviour orElse waitingToken)
-      sendToDB(pwa)
 
     case cn: CheckNonce =>
       context.become(timeoutBehaviour orElse waitingToken)
@@ -39,9 +34,34 @@ class AuthActor(reqctx: RequestContext, message: Message, priKey: Array[Byte]) e
   def waitingRegister: Receive = {
     case DBStrReply(succ, id, key) =>
       succ match {
-        case true => complete(StatusCodes.Created, HttpIdReply(id.get))
-        case false => complete(StatusCodes.BadRequest, Error("username has already been taken"))
+        case true => 
+          userId = id.get
+          val dataDB = context.actorSelection("/user/data-db")
+          context.become(timeoutBehaviour orElse waitingInsertData)
+          val ru = message.asInstanceOf[RegisterUser]
+          dataDB ! Update(id.get, ru.data)          
+        case false => complete(StatusCodes.BadRequest, Error("Register failed"))
       }
+  }
+  
+  def waitingInsertData: Receive = {
+     case DBSuccessReply(succ) =>
+       succ match {
+        case true => 
+          val pubSubDB = context.actorSelection("/user/pub-sub-db")
+          context.become(timeoutBehaviour orElse waitingPublish)
+          val ru = message.asInstanceOf[RegisterUser]
+          pubSubDB ! PublishSelf(userId, ru.iv, ru.key)          
+        case false => complete(StatusCodes.BadRequest, Error("Register failed"))
+      }    
+  }
+  
+  def waitingPublish: Receive = {
+    case DBSuccessReply(succ) =>
+      succ match {
+        case true => complete(StatusCodes.Created, HttpIdReply(userId))                 
+        case false => complete(StatusCodes.BadRequest, Error("Register failed"))
+      }    
   }
 
   def waitingNonce: Receive = {
@@ -62,11 +82,6 @@ class AuthActor(reqctx: RequestContext, message: Message, priKey: Array[Byte]) e
           complete(StatusCodes.OK, HttpDataReply(encrypted))
         case false => complete(StatusCodes.Unauthorized, Error("Improper authentication credentials"))
       }
-  }
-
-  def repeatedHash(n: Int, text: String): String = {
-    if (n <= 0) text
-    else repeatedHash(n - 1, text.sha256.hex)
   }
 }
 

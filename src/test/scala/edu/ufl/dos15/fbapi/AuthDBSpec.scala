@@ -8,7 +8,7 @@ import org.scalatest.WordSpecLike
 import org.scalatest.Matchers
 import org.scalatest.BeforeAndAfterAll
 import com.roundeights.hasher.Implicits._
-import edu.ufl.dos15.db.AuthDB
+import edu.ufl.dos15.db._
 import edu.ufl.dos15.crypto.Crypto._
 import edu.ufl.dos15.fbapi.FBMessage._
 
@@ -25,6 +25,8 @@ class AuthDBSpec(_system: ActorSystem) extends TestKit(_system) with ImplicitSen
 
   override def beforeAll {
     authDB = system.actorOf(Props[AuthDB], "auth-db")
+    val dataDB = system.actorOf(Props[EncryptedDataDB], "data-db")
+    val pubSubDB = system.actorOf(Props[PubSubDB], "pub-sub-db")
   }
 
   override def afterAll {
@@ -32,25 +34,15 @@ class AuthDBSpec(_system: ActorSystem) extends TestKit(_system) with ImplicitSen
   }
 
   "An AuthDB" must {
-    "send back true and id for non-existed user name" in {
-      val name = "rui"
-      val passwd = "password".sha256.hex
+    "send back true and id for register" in {
       val pub = kPair.getPublic().getEncoded()
-      authDB ! Register(name, passwd, pub)
+      authDB ! Register(pub)
       expectMsgPF() {
         case DBStrReply(succ, id, key) if (succ == true && id.isDefined) =>
           userId = id.get
           true
         case _ => false
       } should be(true)
-    }
-
-    "send back false for used user name" in {
-      val name = "rui"
-      val passwd = "password".sha256.hex
-      val pub = kPair.getPublic().getEncoded()
-      authDB ! Register(name, passwd, pub)
-      expectMsg(DBStrReply(false))
     }
 
     "send back nonce" in {

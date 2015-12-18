@@ -19,6 +19,7 @@ object FBMessage {
   case class DeleteList(id: String, ids: String) extends Message
   case class Publish(ownerId: String, objId: String, iv: Array[Byte],
       keys: HashMap[String, Array[Byte]], pType: String) extends Message
+  case class PublishSelf(ownerId: String, iv: Array[Byte], key: Array[Byte]) extends Message
   case class HttpSuccessReply(success: Boolean) extends Message
   case class HttpIdReply(id: String) extends Message
   case class HttpListReply(list: List[String]) extends Message
@@ -53,11 +54,11 @@ object FBMessage {
   case class DeleteMul(id: String, ids: List[String]) extends Message
   case object Tick extends Message
   // auth message
-  case class RegisterCred(cred: Array[Byte], pubKey: Array[Byte]) extends Message
-  case class Register(username: String, passwd: String, pubKey: Array[Byte]) extends Message
+  case class RegisterUser(data: Array[Byte], iv: Array[Byte], key: Array[Byte], 
+      pubKey: Array[Byte]) extends Message
+  case class Register(pubKey: Array[Byte]) extends Message
   case class GetNonce(id: String) extends Message
   case class CheckNonce(nonce: String, signature: Array[Byte]) extends Message
-  case class PassWdAuth(username: String, passwd: String) extends Message
   case class TokenAuth(token: String) extends Message
   case class TokenCred(token: Array[Byte]) extends Message
   case class GetPubKey(id: String) extends Message

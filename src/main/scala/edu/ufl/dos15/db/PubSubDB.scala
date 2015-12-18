@@ -13,7 +13,6 @@ class PubSubDB extends Actor with ActorLogging {
   var selfPostChans = new HashMap[String, HashMap[String, Array[Byte]]]
 
   def receive = {
-    // TODO owner key is Epub(Sym)
     case Publish(ownerId, objId, iv, keys, pType) =>
       ivDB += objId -> iv
       pType match {

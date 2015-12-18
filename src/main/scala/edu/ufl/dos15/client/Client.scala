@@ -34,7 +34,7 @@ class Client(id: String, host: String, port: Int, page: Boolean) extends Actor
   import edu.ufl.dos15.fbapi.FBMessage.HttpListReply
   import edu.ufl.dos15.fbapi.FBMessage.HttpDataReply
   import edu.ufl.dos15.fbapi.FBMessage.EncryptedData
-  import edu.ufl.dos15.fbapi.FBMessage.RegisterCred
+  import edu.ufl.dos15.fbapi.FBMessage.RegisterUser
   import edu.ufl.dos15.fbapi.FBMessage.CheckNonce
   import edu.ufl.dos15.fbapi.FBMessage.UpdatedData
   import edu.ufl.dos15.fbapi.FBMessage.Tick
@@ -96,10 +96,24 @@ class Client(id: String, host: String, port: Int, page: Boolean) extends Actor
   }
 
   def register(): Future[Option[String]] = {
-    val name = randomString(20)
-    val passwd = randomString(12).bcrypt.hex
-    val encrypted = RSA.encrypt(name + "|" + passwd, serverPubKey)
-    val reg = RegisterCred(encrypted, pubKey.getEncoded())
+     val user = User(email=Some(randomString(8)),
+                     first_name=Some(randomString(5)),
+                     last_name=Some(randomString(5)),
+                     gender=Random.nextInt(2) match {
+                        case 0 => Some("male")
+                        case 1 => Some("female")},
+                     verified=Some(false),
+                     locale=Some("en/US"))
+                   
+    val data = Serialization.write(user)
+    val digest = data.sha256
+    val signature = RSA.sign(digest.bytes, priKey)
+    val dataWithSign = data + "|" +  new String(Base64.getEncoder().encodeToString(signature))
+    val iv = AES.generateIv()
+    val symKey = AES.generateKey()
+    val encrypted = AES.encrypt(dataWithSign, symKey, iv)
+    val ekey = RSA.encrypt(symKey.getEncoded(), pubKey)
+    val reg = RegisterUser(encrypted, iv.getIV,ekey, pubKey.getEncoded())
     val pipeline = sendReceive ~> unmarshal[HttpIdReply]
     val responseFuture = pipeline( Post(baseUri + "/register", reg) )
     responseFuture.map {
@@ -153,11 +167,11 @@ class Client(id: String, host: String, port: Int, page: Boolean) extends Actor
     val dataWithSign = data + "|" +  new String(Base64.getEncoder().encodeToString(signature))
     val iv = AES.generateIv()
     val symKey = AES.generateKey()
-    val encyptData = AES.encrypt(dataWithSign, symKey, iv)
+    val encryptData = AES.encrypt(dataWithSign, symKey, iv)
     val keyBytes = symKey.getEncoded()
     val keys = friendsPubKeys.map{ p => (p._1 -> RSA.encrypt(keyBytes, p._2)) }
     keys += id -> RSA.encrypt(keyBytes, pubKey)
-    EncryptedData(encyptData, iv.getIV(), keys)
+    EncryptedData(encryptData, iv.getIV(), keys)
   }
 
   def decyptData(encryptedData: Array[Byte], encryptedKey: Array[Byte], iv: Array[Byte]) = {
