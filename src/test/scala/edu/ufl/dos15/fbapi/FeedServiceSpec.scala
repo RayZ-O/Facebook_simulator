@@ -7,7 +7,10 @@ import scala.concurrent.duration._
 import akka.actor.{ActorSystem, Props}
 import edu.ufl.dos15.db._
 import edu.ufl.dos15.crypto.Crypto._
+import org.junit.runner.RunWith
+import org.specs2.runner.JUnitRunner
 
+@RunWith(classOf[JUnitRunner])
 class FeedServiceSpec extends Specification with Specs2RouteTest with FeedService with Before {
   import FeedService._
   import FBMessage._

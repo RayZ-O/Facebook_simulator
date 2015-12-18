@@ -9,8 +9,12 @@ import com.roundeights.hasher.Implicits._
 import edu.ufl.dos15.db._
 import edu.ufl.dos15.crypto.Crypto._
 import java.util.Base64
+import org.junit.runner.RunWith
+import org.specs2.runner.JUnitRunner
 
-class AuthServiceSpec extends Specification with Specs2RouteTest with AuthService with Before {
+@RunWith(classOf[JUnitRunner])
+class AuthServiceSpec extends Specification with Specs2RouteTest with AuthService
+    with UserService with Before {
   import FeedService._
   import FBMessage._
 
@@ -25,7 +29,9 @@ class AuthServiceSpec extends Specification with Specs2RouteTest with AuthServic
   var token = ""
 
   def before() = {
-    val db = system.actorOf(Props[AuthDB], "auth-db")
+    system.actorOf(Props[AuthDB], "auth-db")
+    system.actorOf(Props[EncryptedDataDB], "data-db")
+    system.actorOf(Props[PubSubDB], "pub-sub-db")
   }
 
   sequential
@@ -72,6 +78,14 @@ class AuthServiceSpec extends Specification with Specs2RouteTest with AuthServic
         val reply = responseAs[HttpDataReply]
         token = new String(RSA.decrypt(reply.data, clienKeyPair.getPrivate()))
         token.equals("") should be equalTo(false)
+      }
+    }
+
+    "authenticatie successfully for valid token" in {
+      val etoken = RSA.encrypt(token, keyPair.getPublic())
+      val etokenStr = new String(Base64.getEncoder().encodeToString(etoken))
+      Get(s"/user/$id") ~> addHeader("ACCESS-TOKEN", etokenStr)~> userRoute ~> check {
+        response.status should be equalTo OK
       }
     }
   }

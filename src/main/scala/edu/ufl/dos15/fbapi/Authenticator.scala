@@ -23,7 +23,7 @@ trait Authenticator  {
      ctx.request.headers.find(_.name == "ACCESS-TOKEN").map(_.value) match {
        case Some(encrypted) =>
          val authDB = actorRefFactory.actorSelection("/user/auth-db")
-         val token = RSA.decrypt(encrypted.getBytes(), keyPair.getPrivate())
+         val token = RSA.decrypt(Base64.getDecoder().decode(encrypted), keyPair.getPrivate())
          implicit val timeout = Timeout(2.seconds)
          val f = authDB ? TokenAuth(new String(token))
          f.map {

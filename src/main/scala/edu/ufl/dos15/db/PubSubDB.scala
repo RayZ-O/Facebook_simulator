@@ -25,6 +25,15 @@ class PubSubDB extends Actor with ActorLogging {
       }
       sender ! DBSuccessReply(true)
 
+    case CreateChannel(pId, iv, key) =>
+      ivDB += pId -> iv
+      feedChans += (pId -> LinkedHashMap.empty)
+      profileChans += (pId -> HashMap(pId->key))
+      friendChans += (pId -> HashMap.empty)
+      selfPostChans += (pId -> HashMap.empty)
+      println(profileChans)
+      sender ! DBSuccessReply(true)
+
     case GetKey(ownerId, objId, pType) =>
       val iv = ivDB.get(objId)
       val ekey = pType match {
@@ -37,10 +46,6 @@ class PubSubDB extends Actor with ActorLogging {
       } else {
         sender ! DBCredReply(false)
       }
-
-    case Update(id, iv) =>
-      ivDB += id -> iv
-      sender ! DBSuccessReply(true)
 
     case PullFeed(id, start) =>
       feedChans.get(id) match {

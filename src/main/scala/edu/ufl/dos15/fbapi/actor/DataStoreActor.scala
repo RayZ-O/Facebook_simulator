@@ -14,7 +14,7 @@ import edu.ufl.dos15.crypto._
 
 case class AESCred(iv: Array[Byte], ekey: Array[Byte])
 
-class DataStoreActor(reqctx: RequestContext, message: Message, key: Array[Byte]) extends Actor
+class DataStoreActor(reqctx: RequestContext, message: Message) extends Actor
     with ActorLogging with Json4sProtocol with RequestHandler {
   val db = context.actorSelection("/user/data-db")
   val ctx = reqctx
@@ -24,16 +24,16 @@ class DataStoreActor(reqctx: RequestContext, message: Message, key: Array[Byte])
   message match {
     case gk: GetKey =>
       context.become(timeoutBehaviour orElse waitingFetchCred)
-      val pubSubDB = context.actorSelection("pub-sub-db")
+      val pubSubDB = context.actorSelection("/user/pub-sub-db")
       pubSubDB ! gk
 
     case PostData(id, ed, pt) =>
       context.become(timeoutBehaviour orElse waitingInsert)
       sendToDB(InsertBytes(ed.data))
 
-    case u: UpdatedData =>
-      context.become(timeoutBehaviour orElse waitingUpdate)
-      sendToDB(Update(u.id, u.data))
+//    case u: UpdatedData => TODO
+//      context.become(timeoutBehaviour orElse waitingUpdate)
+//      sendToDB(Update(u.id, u.data))
 
     case d: Delete =>
       context.become(timeoutBehaviour orElse waitingDelete)
@@ -98,20 +98,20 @@ class DataStoreActor(reqctx: RequestContext, message: Message, key: Array[Byte])
     case DBSuccessReply(succ) =>
       succ match {
         case true =>
-          context.become(waitingUpdateIv)
+          context.become(waitingUpdateCred)
           val pubSubDB = context.actorSelection("pub-sub-db")
           val ud = message.asInstanceOf[UpdatedData]
-          pubSubDB ! Update(ud.id, ud.iv)
+//          pubSubDB ! //TODO
         case false => complete(StatusCodes.NotFound, Error("update error"))
       }
   }
 
-  def waitingUpdateIv: Receive = {
+  def waitingUpdateCred: Receive = {
     case DBSuccessReply(succ) =>
-      succ match {
-        case true => complete(StatusCodes.OK, HttpSuccessReply(succ))
-        case false => complete(StatusCodes.NotFound, Error("update error"))
-      }
+//      succ match {//TODO
+//        case true => complete(StatusCodes.OK, HttpSuccessReply(succ))
+//        case false => complete(StatusCodes.NotFound, Error("update error"))
+//      }
   }
 
   def waitingDelete: Receive = {

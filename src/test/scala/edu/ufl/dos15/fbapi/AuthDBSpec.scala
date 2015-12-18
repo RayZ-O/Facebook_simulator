@@ -25,8 +25,6 @@ class AuthDBSpec(_system: ActorSystem) extends TestKit(_system) with ImplicitSen
 
   override def beforeAll {
     authDB = system.actorOf(Props[AuthDB], "auth-db")
-    val dataDB = system.actorOf(Props[EncryptedDataDB], "data-db")
-    val pubSubDB = system.actorOf(Props[PubSubDB], "pub-sub-db")
   }
 
   override def afterAll {

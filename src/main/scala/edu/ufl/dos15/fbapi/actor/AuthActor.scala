@@ -13,9 +13,11 @@ class AuthActor(reqctx: RequestContext, message: Message) extends Actor
   val db = context.actorSelection("/user/auth-db")
   val ctx = reqctx
   var userId = ""
-  
+  var pubKey: Array[Byte] = _
+
   message match {
-    case RegisterUser(data, iv, key, pub) =>      
+    case RegisterUser(data, iv, key, pub) =>
+      pubKey = pub
       context.become(timeoutBehaviour orElse waitingRegister)
       sendToDB(Register(pub))
 
@@ -34,34 +36,34 @@ class AuthActor(reqctx: RequestContext, message: Message) extends Actor
   def waitingRegister: Receive = {
     case DBStrReply(succ, id, key) =>
       succ match {
-        case true => 
+        case true =>
           userId = id.get
           val dataDB = context.actorSelection("/user/data-db")
           context.become(timeoutBehaviour orElse waitingInsertData)
           val ru = message.asInstanceOf[RegisterUser]
-          dataDB ! Update(id.get, ru.data)          
+          dataDB ! Update(id.get, ru.data)
         case false => complete(StatusCodes.BadRequest, Error("Register failed"))
       }
   }
-  
+
   def waitingInsertData: Receive = {
      case DBSuccessReply(succ) =>
        succ match {
-        case true => 
+        case true =>
           val pubSubDB = context.actorSelection("/user/pub-sub-db")
           context.become(timeoutBehaviour orElse waitingPublish)
           val ru = message.asInstanceOf[RegisterUser]
-          pubSubDB ! PublishSelf(userId, ru.iv, ru.key)          
+          pubSubDB ! CreateChannel(userId, ru.iv, ru.key)
         case false => complete(StatusCodes.BadRequest, Error("Register failed"))
-      }    
+      }
   }
-  
+
   def waitingPublish: Receive = {
     case DBSuccessReply(succ) =>
       succ match {
-        case true => complete(StatusCodes.Created, HttpIdReply(userId))                 
+        case true => complete(StatusCodes.Created, HttpIdReply(userId))
         case false => complete(StatusCodes.BadRequest, Error("Register failed"))
-      }    
+      }
   }
 
   def waitingNonce: Receive = {
