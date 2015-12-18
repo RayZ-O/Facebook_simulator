@@ -6,10 +6,11 @@ import spray.routing.{RequestContext, HttpService}
 import edu.ufl.dos15.fbapi.Json4sProtocol
 import edu.ufl.dos15.fbapi.FBMessage._
 
-class FriendListActor(reqctx: RequestContext, message: Message, key: Array[Byte]) extends Actor
+class FriendListActor(reqctx: RequestContext, message: Message) extends Actor
     with ActorLogging with Json4sProtocol with RequestHandler {
   val db = context.actorSelection("/user/friend-db")
   val ctx = reqctx
+  var oid = ""
 
   message match {
     case f: FetchList =>
@@ -59,6 +60,7 @@ class FriendListActor(reqctx: RequestContext, message: Message, key: Array[Byte]
     case DBStrReply(succ, objId, _) =>
       succ match {
         case true =>
+          oid = objId.get
           context.become(timeoutBehaviour orElse waitingInsertList)
           val pd = message.asInstanceOf[PostData]
           db ! InsertList(pd.id, objId.get)
@@ -72,17 +74,17 @@ class FriendListActor(reqctx: RequestContext, message: Message, key: Array[Byte]
         case true =>
           context.become(timeoutBehaviour orElse waitingPublish)
           val pd = message.asInstanceOf[PostData]
-          val pubSubDB = context.actorSelection("pub-sub-db")
+          val pubSubDB = context.actorSelection("/user/pub-sub-db")
           pubSubDB ! Publish(pd.id, objId.get, pd.ed.iv, pd.ed.keys, pd.pType)
         case false => complete(StatusCodes.BadRequest, Error("post error"))
       }
   }
 
   def waitingPublish: Receive = {
-    case DBStrReply(succ, objId, _) =>
+    case DBSuccessReply(succ) =>
       succ match {
         case true =>
-          complete(StatusCodes.Created, HttpIdReply(objId.get))
+          complete(StatusCodes.Created, HttpIdReply(oid))
         case false => complete(StatusCodes.BadRequest, Error("post error"))
       }
   }
