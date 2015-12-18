@@ -73,7 +73,7 @@ class FriendListServiceSpec extends Specification with Specs2RouteTest with Frie
         response.entity should not be equalTo(None)
         val reply = responseAs[HttpIdReply]
         friendListId = reply.id
-        reply.id.equals("") should be equalTo(false)
+        friendListId.equals("") should be equalTo(false)
       }
     }
 

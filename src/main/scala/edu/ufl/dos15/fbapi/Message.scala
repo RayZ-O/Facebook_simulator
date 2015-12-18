@@ -30,6 +30,7 @@ object FBMessage {
   case class InsertBytes(value: Array[Byte]) extends Message
   case class InsertStr(value: String) extends Message
   case class InsertList(ownerId: String, listId: String) extends Message
+  case class InsertNew(id: String, value: Array[Byte]) extends Message
   case class Update(id: String, value: Array[Byte]) extends Message
   case class UpdateCred(id: String, key: Array[Byte], iv: Array[Byte]) extends Message
   case class UpdateMul(id: String, ls: List[String]) extends Message

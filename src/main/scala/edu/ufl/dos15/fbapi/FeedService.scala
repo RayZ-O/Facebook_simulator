@@ -73,6 +73,20 @@ trait FeedService extends HttpService with RequestActorFactory with Json4sProtoc
         }
       }
     } ~
+    get {
+      path("feed" / "pull") {
+        authenticate(tokenAuthenticator) { uid =>
+          parameter('start.as[Int]) { start =>
+            ctx => handle[DataStoreActor](ctx,  PullFeed(uid, start))
+          }
+        }
+      } ~
+      path("feed" / "me") {
+        authenticate(tokenAuthenticator) { uid =>
+          ctx => handle[DataStoreActor](ctx,  GetSelfPost(uid))
+        }
+      }
+    } ~
     path("feed" / Segment) { objId => // gets infomation about a post(feed)
       authenticate(tokenAuthenticator) { uid =>
         get {
@@ -87,21 +101,6 @@ trait FeedService extends HttpService with RequestActorFactory with Json4sProtoc
           ctx => handle[DataStoreActor](ctx, Delete(objId))
         }
       }
-    } ~
-    get {
-      path("feed" / "pull") {
-        authenticate(tokenAuthenticator) { uid =>
-          parameter('start.as[Int]) { start =>
-            ctx => handle[DataStoreActor](ctx,  PullFeed(uid, start))
-          }
-        }
-      } ~
-      path("feed" / "me") {
-        authenticate(tokenAuthenticator) { uid =>
-          ctx => handle[DataStoreActor](ctx,  GetSelfPost(uid))
-        }
-      }
     }
-
   }
 }

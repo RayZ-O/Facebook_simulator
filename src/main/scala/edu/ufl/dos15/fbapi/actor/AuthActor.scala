@@ -41,7 +41,7 @@ class AuthActor(reqctx: RequestContext, message: Message) extends Actor
           val dataDB = context.actorSelection("/user/data-db")
           context.become(timeoutBehaviour orElse waitingInsertData)
           val ru = message.asInstanceOf[RegisterUser]
-          dataDB ! Update(id.get, ru.data)
+          dataDB ! InsertNew(id.get, ru.data)
         case false => complete(StatusCodes.BadRequest, Error("Register failed"))
       }
   }
@@ -54,7 +54,7 @@ class AuthActor(reqctx: RequestContext, message: Message) extends Actor
           context.become(timeoutBehaviour orElse waitingPublish)
           val ru = message.asInstanceOf[RegisterUser]
           pubSubDB ! CreateChannel(userId, ru.iv, ru.key)
-        case false => complete(StatusCodes.BadRequest, Error("Register failed"))
+        case false => complete(StatusCodes.BadRequest, Error("Register insert failed"))
       }
   }
 
@@ -62,7 +62,7 @@ class AuthActor(reqctx: RequestContext, message: Message) extends Actor
     case DBSuccessReply(succ) =>
       succ match {
         case true => complete(StatusCodes.Created, HttpIdReply(userId))
-        case false => complete(StatusCodes.BadRequest, Error("Register failed"))
+        case false => complete(StatusCodes.BadRequest, Error("Register publish failed"))
       }
   }
 

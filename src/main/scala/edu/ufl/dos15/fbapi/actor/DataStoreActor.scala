@@ -41,11 +41,11 @@ class DataStoreActor(reqctx: RequestContext, message: Message) extends Actor
 
     case p: PullFeed =>
       context.become(timeoutBehaviour orElse waitingPull)
-      sendToDB(p)
+      context.actorSelection("/user/pub-sub-db") ! p
 
     case gp: GetSelfPost =>
       context.become(timeoutBehaviour orElse waitingPull)
-      sendToDB(gp)
+      context.actorSelection("/user/pub-sub-db") ! gp
 
     case msg =>
       throw new UnsupportedOperationException(s"Unsupported Operation $msg in per-request actor")
@@ -78,9 +78,9 @@ class DataStoreActor(reqctx: RequestContext, message: Message) extends Actor
       succ match {
         case true =>
           oid = objId.get
-          context.become(timeoutBehaviour orElse waitingUpdatePublish)
+          context.become(timeoutBehaviour orElse waitingPublish)
           val pd = message.asInstanceOf[PostData]
-          val pubSubDB = context.actorSelection("pub-sub-db")
+          val pubSubDB = context.actorSelection("/user/pub-sub-db")
           pubSubDB ! Publish(pd.id, oid, pd.ed.iv, pd.ed.keys, pd.pType)
         case false => complete(StatusCodes.BadRequest, Error("post error"))
       }

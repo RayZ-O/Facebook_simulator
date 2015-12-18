@@ -31,7 +31,6 @@ class PubSubDB extends Actor with ActorLogging {
       profileChans += (pId -> HashMap(pId->key))
       friendChans += (pId -> HashMap.empty)
       selfPostChans += (pId -> HashMap.empty)
-      println(profileChans)
       sender ! DBSuccessReply(true)
 
     case GetKey(ownerId, objId, pType) =>
@@ -66,9 +65,8 @@ class PubSubDB extends Actor with ActorLogging {
 
   def addToChan[T <: collection.mutable.Map[String, Array[Byte]]](chan: HashMap[String, T],
       objId: String, userId: String, key: Array[Byte]) = {
-    chan.get(userId) match {
-      case Some(m) => m += objId -> key
-      case None => //nothing to do
+    if(chan.contains(userId)) {
+      chan(userId) += objId -> key
     }
   }
 }
