@@ -73,15 +73,17 @@ trait FeedService extends HttpService with RequestActorFactory with Json4sProtoc
         }
       }
     } ~
-    get {
-      path("feed" / "pull") {
+    path("feed" / "pull") {
+      get {
         authenticate(tokenAuthenticator) { uid =>
           parameter('start.as[Int]) { start =>
             ctx => handle[DataStoreActor](ctx,  PullFeed(uid, start))
           }
         }
-      } ~
-      path("feed" / "me") {
+      }
+    } ~
+    path("feed" / "me") {
+      get {
         authenticate(tokenAuthenticator) { uid =>
           ctx => handle[DataStoreActor](ctx,  GetSelfPost(uid))
         }

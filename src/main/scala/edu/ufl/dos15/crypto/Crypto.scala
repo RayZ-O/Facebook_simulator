@@ -48,7 +48,8 @@ object Crypto {
 
   def decryptAESVerify(encryptedData: Array[Byte], encryptedKey: Array[Byte], priKey: PrivateKey,
       iv: Array[Byte]): (Boolean, String) = {
-//    try {
+//    try
+//    {
       val secKey = AES.decodeKey(RSA.decrypt(encryptedKey, priKey))
       val dataWithSign = new String(AES.decrypt(encryptedData, secKey, new IvParameterSpec(iv)))
       dataWithSign.split("\\|") match {

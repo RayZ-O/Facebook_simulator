@@ -9,7 +9,7 @@ class FriendDB extends Actor with ActorLogging {
   import scala.collection.mutable.HashSet
   private var friendDB = new HashMap[String, HashSet[String]]
   import scala.collection.mutable.ListBuffer
-  private var ownerToList = new HashMap[String, ListBuffer[String]]
+  private var ownerToList = new HashMap[String, String]
   private var sequenceNum = 0
 
   def receive = {
@@ -21,7 +21,7 @@ class FriendDB extends Actor with ActorLogging {
 
     case GetFriendList(id) =>
       ownerToList.get(id) match {
-        case Some(lb) => sender ! DBListReply(true, Some(lb.toList))
+        case Some(i) => sender ! DBStrReply(true, Some(i))
         case None => sender ! DBListReply(false)
       }
 
@@ -35,16 +35,20 @@ class FriendDB extends Actor with ActorLogging {
 
     case InsertList(ownerId, listId) =>
         friendDB += (listId -> HashSet.empty)
-        ownerToList.get(ownerId) match {
-          case Some(l) => l += listId
-          case None => ownerToList += (ownerId -> ListBuffer(listId))
-        }
+        ownerToList += (ownerId -> listId)
         sender ! DBStrReply(true, Some(listId))
 
     case UpdateMul(id, idList) =>
       friendDB.get(id) match {
         case Some(fl) =>
-          idList foreach { id => fl += id }
+          idList foreach { aid =>
+            ownerToList.get(aid) match {
+              case Some(lid) =>
+                friendDB(lid) += id
+                fl += aid
+              case None => // nothing to do
+            }
+          }
           sender ! DBSuccessReply(true)
         case None => sender ! DBSuccessReply(false)
       }
@@ -52,12 +56,8 @@ class FriendDB extends Actor with ActorLogging {
     case Delete(objId, ownerId) =>
       if (friendDB.contains(objId)) {
         friendDB -= objId
-        ownerToList.get(ownerId.get) match {
-          case Some(l) =>
-            l -= objId
-            sender ! DBSuccessReply(true)
-          case None => sender ! DBSuccessReply(false)
-        }
+        ownerToList -= objId
+        sender ! DBSuccessReply(true)
       } else {
         sender ! DBSuccessReply(false)
       }

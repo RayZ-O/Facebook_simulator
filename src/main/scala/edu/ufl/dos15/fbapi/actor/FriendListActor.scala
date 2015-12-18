@@ -18,7 +18,7 @@ class FriendListActor(reqctx: RequestContext, message: Message) extends Actor
        sendToDB(f)
 
     case g: GetFriendList =>
-      context.become(timeoutBehaviour orElse waitingFetch)
+      context.become(timeoutBehaviour orElse waitingFetchId)
       sendToDB(g)
 
     case PostData(id, ed, pt) =>
@@ -52,7 +52,15 @@ class FriendListActor(reqctx: RequestContext, message: Message) extends Actor
     case DBListReply(succ, list) =>
       succ match {
         case true => complete(StatusCodes.OK, HttpListReply(list.get))
-        case false => complete(StatusCodes.NotFound, Error("post error"))
+        case false => complete(StatusCodes.NotFound, Error("get error"))
+      }
+  }
+
+  def waitingFetchId: Receive = {
+    case DBStrReply(succ, id, _) =>
+      succ match {
+        case true => complete(StatusCodes.OK, HttpIdReply(id.get))
+        case false => complete(StatusCodes.NotFound, Error("get error"))
       }
   }
 

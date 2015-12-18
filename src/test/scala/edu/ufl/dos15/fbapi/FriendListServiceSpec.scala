@@ -93,8 +93,8 @@ class FriendListServiceSpec extends Specification with Specs2RouteTest with Frie
       Get(s"/friends/me") ~> addHeader("ACCESS-TOKEN", etokenStr) ~> friendListRoute ~> check {
         response.status should be equalTo OK
         response.entity should not be equalTo(None)
-        val reply = responseAs[HttpListReply]
-        reply.list(0) === friendListId
+        val reply = responseAs[HttpIdReply]
+        reply.id === friendListId
       }
     }
 
@@ -120,18 +120,6 @@ class FriendListServiceSpec extends Specification with Specs2RouteTest with Frie
         response.entity should not be equalTo(None)
         val reply = responseAs[HttpSuccessReply]
         reply.success should be equalTo(true)
-      }
-    }
-
-    "return ids in friend list for GET request to /friends/{id}/list"  in {
-      Get(s"/friends/$friendListId/list") ~> addHeader("ACCESS-TOKEN", etokenStr) ~> friendListRoute ~> check {
-        response.status should be equalTo OK
-        response.entity should not be equalTo(None)
-        val reply = responseAs[HttpListReply]
-        val fl = reply.list
-        fl.contains("1234") should be equalTo(true)
-        fl.contains("2345") should be equalTo(true)
-        fl.contains("3456") should be equalTo(true)
       }
     }
 
